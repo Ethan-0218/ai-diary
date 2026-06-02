@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Conversation {
+  id          String   @id @default(uuid())
+  title       String
+  format      String // 'plain' | 'newspaper' | 'novel'
+  modelId     String
+  latitude    Float?
+  longitude   Float?
+  weatherNote String? // 대화 시작 시점의 현재 위치 날씨 (예: "서울특별시 명동 · 맑음, 27°C (낮)")
+  createdAt   DateTime @default(now())
+
+  messages    Message[]
+  attachments Attachment[]
+  diary       Diary?
+  llmUsages   LlmUsage[]
+  feedback    Feedback?
+}
+
+/// 테스트 후 사람이 남기는 줄글 피드백 — agent 개선 분석용
+model Feedback {
+  id             String   @id @default(uuid())
+  conversationId String   @unique
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  role           String // 'user' | 'assistant'
+  content        String
+  parts          String? // JSON string: attachments / tool calls
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Attachment {
+  id             String   @id @default(uuid())
+  conversationId String
+  messageId      String?
+  filePath       String
+  mimeType       String
+  caption        String?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model Diary {
+  id             String   @id @default(uuid())
+  conversationId String   @unique
+  format         String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+/// 가벼운 비용 집계 row — 표시/쿼리용
+model LlmUsage {
+  id              String   @id @default(uuid())
+  traceId         String
+  conversationId  String
+  step            String // first_greeting | chat_turn | photo_caption | diary_generation
+  modelId         String
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  cacheReadTokens Int      @default(0)
+  costUsd         Float    @default(0)
+  status          String // success | failure
+  durationMs      Int      @default(0)
+  errorSummary    String?
+  createdAt       DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  trace        LlmCallTrace?
+
+  @@index([conversationId, createdAt])
+  @@index([traceId])
+}
+
+/// raw 입출력 보존 — 개선점 분석용
+model LlmCallTrace {
+  id              String   @id @default(uuid())
+  llmUsageId      String   @unique
+  traceId         String
+  requestPayload  String // JSON
+  responsePayload String? // JSON
+  createdAt       DateTime @default(now())
+
+  usage LlmUsage @relation(fields: [llmUsageId], references: [id], onDelete: Cascade)
+
+  @@index([traceId])
+}

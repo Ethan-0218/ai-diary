@@ -1,0 +1,26 @@
+{
+  "name": "@ai-diary/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 9000 -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -p 9000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-diary/shared": "workspace:*",
+    "@ai-sdk/react": "^3.0.0",
+    "ai": "^6.0.140",
+    "next": "^16.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "typescript": "^5.6.3"
+  }
+}

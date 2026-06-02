@@ -1,0 +1,4 @@
+packages:
+  - 'apps/*'
+  - '!apps/mobile' # RN 앱은 독립 pnpm 프로젝트(자체 lockfile/node_modules, node-linker=hoisted)
+  - 'packages/*'
