@@ -32,6 +32,7 @@ import {
 } from './conversation.service';
 import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
+import { MemoryService } from '../memory/memory.service';
 
 export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 
@@ -52,6 +53,7 @@ export class ConversationController {
     private readonly conv: ConversationService,
     private readonly ai: AiService,
     private readonly tracing: LlmTracingService,
+    private readonly memory: MemoryService,
   ) {}
 
   @Post()
@@ -117,11 +119,14 @@ export class ConversationController {
       await this.conv.saveMessage(id, 'user', uiText(lastUser), lastUser.parts);
     }
 
+    const memoryContext = await this.memory.buildContext(req.userId);
     const system = buildChatSystem(
       format,
       new Date(),
       conv.weatherNote,
       parseCollectionState(conv.collectionState),
+      false,
+      memoryContext,
     );
     const traceId = uuid();
     const startedAt = Date.now();
@@ -147,6 +152,17 @@ export class ConversationController {
             reason: z.string().describe('왜 이 순간에 사진을 권하는지'),
           }),
           execute: async ({ reason }) => ({ acknowledged: true, reason }),
+        }),
+        recallMemory: tool({
+          description:
+            '과거 대화/일기에서 관련된 기억을 의미검색으로 회수한다. 유저가 과거를 언급하거나("지난번 그거", "저번에 말한…") 연속성이 필요할 때 호출. ' +
+            '결과가 비면 모른다고 솔직히 말하고 지어내지 마라. 이것은 내부 신호이니 인자/JSON을 답변 본문에 출력하지 마라.',
+          inputSchema: z.object({
+            query: z.string().describe('회수하고 싶은 주제/키워드'),
+          }),
+          execute: async ({ query }) => ({
+            memories: await this.memory.recall(req.userId, query),
+          }),
         }),
         updateCollectionState: tool({
           description:
@@ -242,6 +258,7 @@ export function stripLeakedToolJson(text: string | undefined): string {
   if (!text) return '';
   const TOOL_KEYS = new Set([
     'reason', // requestPhoto
+    'query', // recallMemory
     'filled',
     'skipped',
     'enough',

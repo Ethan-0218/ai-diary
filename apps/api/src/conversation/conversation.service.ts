@@ -23,6 +23,7 @@ import {
 import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 import { WeatherService } from '../ai/weather.service';
+import { MemoryService } from '../memory/memory.service';
 
 /**
  * 업로드 파일 경로(상대). 호스트는 붙이지 않는다 — 클라이언트가 자신의 API_BASE로 절대화한다.
@@ -49,6 +50,7 @@ export class ConversationService {
     private readonly ai: AiService,
     private readonly tracing: LlmTracingService,
     private readonly weather: WeatherService,
+    private readonly memory: MemoryService,
   ) {}
 
   /** 대화 생성 + AI 첫 인사 1턴 (로그인 유저 소유) */
@@ -84,7 +86,8 @@ export class ConversationService {
     );
 
     const traceId = uuid();
-    const system = buildChatSystem(format, now, weatherNote, null, true);
+    const memoryContext = await this.memory.buildContext(userId);
+    const system = buildChatSystem(format, now, weatherNote, null, true, memoryContext);
     const nowTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     const weatherLine = weatherNote
       ? `현재 날씨는 "${weatherNote}"이다. 인사에 날씨를 자연스럽게 한마디 곁들여도 좋다. ` +
@@ -314,21 +317,40 @@ export class ConversationService {
   async generateDiary(id: string, userId: string) {
     const { conv, format, transcript, photoNotes, system } =
       await this.buildDiaryContext(id, userId);
+
+    // 연속성(§4-A): 과거 프로필/에피소드를 생성에 살짝 주입.
+    const memoryContext = await this.memory.buildContext(userId);
+    const genSystem = memoryContext
+      ? `${system}\n\n[과거 맥락 — 연속성 참고용]\n${memoryContext}\n` +
+        `- 자연스러우면 "어제 시작한 …을 오늘 마무리"처럼 과거와 살짝 이을 수 있다. 단 위에 없는 사실을 지어내지 마라.`
+      : system;
     const prompt = `[대화 내용]\n${transcript}${photoNotes}`;
     const traceId = uuid();
 
     const result = await this.tracing.trace(
       { traceId, conversationId: id, step: 'diary_generation', modelId: conv.modelId },
-      { system, prompt },
+      { system: genSystem, prompt },
       () =>
         generateText({
           model: this.ai.resolveModel(conv.modelId),
-          system,
+          system: genSystem,
           prompt,
         }),
     );
 
-    return this.saveDiary(id, userId, format, result.text);
+    const saved = await this.saveDiary(id, userId, format, result.text);
+
+    // 후처리: 대화에서 기억 추출·저장 (best-effort, 내부에서 throw 흡수).
+    await this.memory.onDiaryComplete({
+      userId,
+      conversationId: id,
+      modelId: conv.modelId,
+      transcript,
+      diaryId: saved.diary.id,
+      diaryContent: saved.diary.content,
+    });
+
+    return saved;
   }
 
   /** 작성된 일기를 유저의 수정 요청에 따라 다시 쓴다 (초안→수정 모드) */
@@ -380,6 +402,7 @@ export class ConversationService {
       'chat_turn',
       'photo_caption',
       'diary_generation',
+      'memory_extraction',
     ];
     const byStep = Object.fromEntries(
       steps.map((s) => [s, { calls: 0, costUsd: 0, tokens: 0 }]),
@@ -495,9 +518,17 @@ export function buildChatSystem(
   weatherNote?: string | null,
   collectionState?: CollectionState | null,
   forGreeting = false,
+  memoryContext?: string | null,
 ): string {
   const def = getFormatDef(format);
   const checklist = def.requiredInfo.map((x) => `- ${x}`).join('\n');
+
+  // 세션 간 기억(§4-A) — 프로필+최근 에피소드. 자연스러운 연속성에만 쓰고 창작 금지.
+  const memoryBlock = memoryContext
+    ? `[기억 — 이 유저에 대해 이전 대화에서 알게 된 것]\n${memoryContext}\n` +
+      `- 자연스러우면 이어서 안부를 묻거나("저번에 말한 …는 어떻게 됐어?") 맥락에 활용하라.\n` +
+      `- 단, 여기 없는 사실을 지어내지 말고, 유저가 부정하면 즉시 받아들여라. 심문하듯 캐묻지 마라.\n\n`
+    : '';
   const weatherBlock = weatherNote
     ? `[오늘 날씨] ${weatherNote}\n` +
       `- 위 날씨는 유저의 현재 위치 기준 실제 정보다. 대화/일기에 자연스럽게 활용해도 된다.\n` +
@@ -522,6 +553,7 @@ export function buildChatSystem(
     `[현재 시각] ${now.toLocaleString('ko-KR')}\n` +
     `- 이 시각 기준으로 하루가 아직 진행 중일 수 있다. "오늘 하루 어땠어"처럼 하루가 끝난 듯 회고를 강요하지 말고, "지금까지의 하루"를 묻는다.\n` +
     `- 아직 이르거나 낮 시간이면, 어느 정도 이야기한 뒤 "저녁/밤에 하루를 정리하며 다시 이야기하자"고 제안할 수 있다.\n\n` +
+    memoryBlock +
     weatherBlock +
     stateBlock +
     `[이 형식(${def.label})에서 일기를 쓰려면 다음 정보를 모아야 한다]\n${checklist}\n\n` +

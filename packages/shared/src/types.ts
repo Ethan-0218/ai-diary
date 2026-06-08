@@ -5,7 +5,8 @@ export type LlmStep =
   | 'first_greeting'
   | 'chat_turn'
   | 'photo_caption'
-  | 'diary_generation';
+  | 'diary_generation'
+  | 'memory_extraction';
 
 export type LlmCallStatus = 'success' | 'failure';
 

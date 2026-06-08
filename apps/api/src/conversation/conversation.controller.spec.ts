@@ -150,6 +150,7 @@ describe('ConversationController', () => {
   let conv: any;
   let ai: any;
   let tracing: any;
+  let memory: any;
   const req = { userId: 'u1' } as any;
 
   beforeEach(() => {
@@ -168,7 +169,11 @@ describe('ConversationController', () => {
     };
     ai = { resolveModel: jest.fn(() => 'MODEL') };
     tracing = { record: jest.fn() };
-    controller = new ConversationController(conv, ai, tracing);
+    memory = {
+      buildContext: jest.fn().mockResolvedValue(null),
+      recall: jest.fn().mockResolvedValue([]),
+    };
+    controller = new ConversationController(conv, ai, tracing, memory);
     streamText.mockReset();
     fsp.mkdir.mockReset().mockResolvedValue(undefined);
     fsp.writeFile.mockReset().mockResolvedValue(undefined);
@@ -220,6 +225,11 @@ describe('ConversationController', () => {
     expect(await cfg.tools.requestPhoto.execute({ reason: 'r' })).toEqual({ acknowledged: true, reason: 'r' });
     await cfg.tools.updateCollectionState.execute({ filled: ['a'], skipped: [], enough: true, nextGap: 'g' });
     expect(conv.updateCollectionState).toHaveBeenCalledWith('c1', { filled: ['a'], skipped: [], enough: true, nextGap: 'g' });
+    memory.recall.mockResolvedValue([{ type: 'episodic', text: '지난 일', date: '2026-06-01' }]);
+    expect(await cfg.tools.recallMemory.execute({ query: '프로젝트' })).toEqual({
+      memories: [{ type: 'episodic', text: '지난 일', date: '2026-06-01' }],
+    });
+    expect(memory.recall).toHaveBeenCalledWith('u1', '프로젝트');
 
     // onError
     cfg.onError({ error: new Error('boom') });

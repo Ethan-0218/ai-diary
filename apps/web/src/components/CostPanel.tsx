@@ -9,6 +9,7 @@ const STEP_LABEL: Record<LlmStep, string> = {
   chat_turn: '대화',
   photo_caption: '사진 분석',
   diary_generation: '일기 생성',
+  memory_extraction: '기억 추출',
 };
 
 export function CostPanel({
