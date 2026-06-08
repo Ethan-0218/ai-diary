@@ -4,6 +4,8 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { PrismaModule } from './prisma/prisma.module';
 import { AiModule } from './ai/ai.module';
 import { ConversationModule } from './conversation/conversation.module';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
 import { UPLOAD_DIR } from './conversation/conversation.controller';
 
 @Module({
@@ -15,6 +17,8 @@ import { UPLOAD_DIR } from './conversation/conversation.controller';
     }),
     PrismaModule,
     AiModule,
+    UserModule,
+    AuthModule,
     ConversationModule,
   ],
 })

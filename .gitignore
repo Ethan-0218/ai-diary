@@ -7,3 +7,6 @@ dist/
 apps/api/uploads/
 apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
+
+# 테스트 커버리지 출력
+coverage/

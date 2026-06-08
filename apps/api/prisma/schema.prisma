@@ -3,12 +3,30 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/// 소셜 로그인 유저. provider+providerId로 식별(Apple/Google/Kakao/dev).
+model User {
+  id         String   @id @default(uuid())
+  provider   String // 'apple' | 'google' | 'kakao' | 'dev'
+  providerId String // provider가 준 고유 id (sub 등)
+  email      String?
+  name       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  conversations Conversation[]
+
+  @@unique([provider, providerId])
 }
 
 model Conversation {
   id          String   @id @default(uuid())
+  /// 소유 유저. 인증 배선 전 익명 대화 허용을 위해 nullable(이후 필수화 예정).
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   format      String // 'plain' | 'newspaper' | 'novel'
   modelId     String

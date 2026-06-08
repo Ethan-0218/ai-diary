@@ -1,0 +1,24 @@
+# 로컬 개발용 Postgres + pgvector.
+# 기억(M3)의 벡터검색까지 한 DB에서 (agent-v2 §9). 포트 5434(기본 5432 충돌 회피).
+# 시작: docker compose up -d  ·  접속: postgresql://aidiary:aidiary@localhost:5434/aidiary
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ai-diary-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aidiary
+      POSTGRES_PASSWORD: aidiary
+      POSTGRES_DB: aidiary
+    ports:
+      - '5434:5432'
+    volumes:
+      - ai-diary-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aidiary -d aidiary']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  ai-diary-pgdata:
