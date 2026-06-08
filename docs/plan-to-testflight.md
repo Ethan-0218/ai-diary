@@ -99,7 +99,14 @@ TestFlight엔 두 종류:
   - [x] **라이브 검증(Claude Haiku, Gemini 크레딧 소진으로 대체)**: 존댓말/반말 인사 분리 · 사건만→enough=false · 감정=유저확인만 충족 · 누적 · enough→자연 제안 · 일기 글말체+어휘에코+창작금지 · 기자 육하원칙. ✅ S3.2 끝기준("입력→agent→일기") 충족.
   - **남은 것**: 메모리(연속성·예정기억 greeting)=M3 · 일기장 커머스/책장=S3.3/3.4 · 모바일 UI=S3.4. 개선 nit: 일기에 대화 메타발언("이쯤이면 충분") 섞임 → 생성 프롬프트에 제외 한 줄(완료).
 - S3.2 상세: _(위 구현 진행 — agent 코어 web 검증 완료)_
-- S3.3 상세: _(아직)_
+### S3.3 상세 — 백엔드 (2026-06-08, 진행 중)
+> 기존 PoC API(대화·일기·사진 CRUD)를 실스택으로 끌어올림. **백엔드 테스트 커버리지 100% 유지**(유저 지침).
+- [x] **DB: SQLite → Postgres+pgvector** (docker-compose 포트 5434, Prisma 마이그레이션 재생성).
+- [x] **인증**: User 모델 + AuthService(Google/Apple/Kakao id_token 검증 + dev-login) + @nestjs/jwt + JwtAuthGuard. `/auth/login·dev-login·me`.
+- [x] **유저 스코프**: Conversation/Diary → userId, ConversationController 가드, requireConversation(id,userId) 소유권(타인 NotFound). web 하니스는 자동 dev-login으로 토큰 첨부.
+- [x] **테스트 100%**: jest+@swc/jest, 전 서비스 백필(110 tests, 글로벌 100%). 게이트 `pnpm --filter @ai-diary/api test:cov`.
+- **남은 것**: 기억(M3, pgvector 벡터검색) · OAuth 실제 client id 연결(앱 등록 후, 현재 dev-login으로 대체) · 실 모바일 로그인 UI=S3.4.
+- S3.3 상세: _(위 — 백엔드 핵심 완료, 기억은 M3)_
 - S3.4 상세: _(아직)_
 - S3.5 상세: _(아직)_
 - …
