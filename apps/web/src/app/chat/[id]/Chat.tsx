@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { getFormatDef, type ConversationDetail } from '@ai-diary/shared';
-import { api, API_BASE, getToken } from '@/lib/api';
+import { api, API_BASE, absoluteUrl, getToken } from '@/lib/api';
 import { CostPanel } from '@/components/CostPanel';
 
 export function Chat({ detail }: { detail: ConversationDetail }) {
@@ -356,7 +356,7 @@ function MessageBubble({ message }: { message: UIMessage }) {
       {photos.map((url, i) => (
         <img
           key={i}
-          src={url}
+          src={absoluteUrl(url)}
           alt=""
           style={{
             display: 'block',

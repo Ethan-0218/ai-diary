@@ -146,22 +146,12 @@ describe('ConversationService', () => {
       expect(d.feedback?.content).toBe('fb');
     });
 
-    it('첨부 URL: PUBLIC_BASE / PORT / 기본 9001', async () => {
-      const withAtt = () => conversations.findOne.mockResolvedValue(
+    it('첨부 URL: 호스트 없는 상대경로(클라가 절대화)', async () => {
+      conversations.findOne.mockResolvedValue(
         detailRow({ attachments: [{ id: 'a1', filePath: 'x.jpg', caption: null, mimeType: 'image/jpeg', createdAt: new Date() }] }),
       );
-      const url = async () => (await service.getDetail('c1', 'u1')).attachments[0].url;
-      const orig = { PUBLIC_BASE: process.env.PUBLIC_BASE, PORT: process.env.PORT };
-      const restore = (k: 'PUBLIC_BASE' | 'PORT', v?: string) => (v === undefined ? delete process.env[k] : (process.env[k] = v));
-
-      withAtt(); process.env.PUBLIC_BASE = 'http://cdn';
-      expect(await url()).toBe('http://cdn/uploads/x.jpg');
-      withAtt(); delete process.env.PUBLIC_BASE; process.env.PORT = '5555';
-      expect(await url()).toBe('http://localhost:5555/uploads/x.jpg');
-      withAtt(); delete process.env.PORT;
-      expect(await url()).toBe('http://localhost:9001/uploads/x.jpg');
-
-      restore('PUBLIC_BASE', orig.PUBLIC_BASE); restore('PORT', orig.PORT);
+      const d = await service.getDetail('c1', 'u1');
+      expect(d.attachments[0].url).toBe('/uploads/x.jpg');
     });
 
     it('없으면/타인이면 NotFound', async () => {

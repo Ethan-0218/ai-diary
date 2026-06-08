@@ -24,9 +24,12 @@ import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 import { WeatherService } from '../ai/weather.service';
 
-/** 업로드 파일 절대 URL 베이스 (env를 호출 시점에 읽는다) */
-function publicBase(): string {
-  return process.env.PUBLIC_BASE ?? `http://localhost:${process.env.PORT ?? 9001}`;
+/**
+ * 업로드 파일 경로(상대). 호스트는 붙이지 않는다 — 클라이언트가 자신의 API_BASE로 절대화한다.
+ * (서버 호스트를 박으면 맥 IP가 DHCP로 바뀔 때 실기기에서 이미지가 죽는다. IP 하드코딩 금지.)
+ */
+function uploadUrl(filePath: string): string {
+  return `/uploads/${filePath}`;
 }
 
 @Injectable()
@@ -160,7 +163,7 @@ export class ConversationService {
       })),
       attachments: attachments.map((a) => ({
         id: a.id,
-        url: `${publicBase()}/uploads/${a.filePath}`,
+        url: uploadUrl(a.filePath),
         caption: a.caption,
         mimeType: a.mimeType,
         createdAt: a.createdAt.toISOString(),
@@ -467,7 +470,7 @@ export class ConversationService {
 
     return {
       id: attachment.id,
-      url: `${publicBase()}/uploads/${attachment.filePath}`,
+      url: uploadUrl(attachment.filePath),
       caption,
       mimeType: file.mimetype,
       createdAt: attachment.createdAt.toISOString(),
