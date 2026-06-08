@@ -38,6 +38,12 @@ TestFlight엔 두 종류:
 
 > 참고: TestFlight 빌드의 IAP는 **자동으로 샌드박스(무과금)**. 외부 검수(S8) 전, 내부 설치(S6) 직후 바로 S7 결제 테스트 가능.
 
+### 📍 진행 현황 (2026-06-08)
+- ✅ **S1**(앱등록·유료계약) · ✅ **S2**(로컬 개발환경) · ✅ **S3.1**(서비스 기획) · ✅ **S3.2**(AI agent 구현+검증)
+- ✅ **S3.3 백엔드 코어 완료**: Node/Nest API · 인증(소셜 검증·JWT·가드·dev-login) · DB(Postgres+pgvector, TypeORM) · 파일/이미지(업로드·vision·HEIC) · agent 연동 · **테스트 커버리지 100%**.
+  - 남은 것: 기억 CRUD=**M3 연기**(pgvector 준비됨) · 실 OAuth client id=앱등록(외부) · prod 마이그레이션 전환.
+- ⬜ **다음 = S3.4 프론트(모바일 UI)** → S3.5 연동테스트 → S4~S8(IAP·릴리스·TestFlight).
+
 ---
 
 ## 진행 규칙
