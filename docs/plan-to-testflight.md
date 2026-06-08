@@ -101,7 +101,7 @@ TestFlight엔 두 종류:
 - S3.2 상세: _(위 구현 진행 — agent 코어 web 검증 완료)_
 ### S3.3 상세 — 백엔드 (2026-06-08, 진행 중)
 > 기존 PoC API(대화·일기·사진 CRUD)를 실스택으로 끌어올림. **백엔드 테스트 커버리지 100% 유지**(유저 지침).
-- [x] **DB: SQLite → Postgres+pgvector** (docker-compose 포트 5434, Prisma 마이그레이션 재생성).
+- [x] **DB: SQLite → Postgres+pgvector** (docker-compose 포트 5434). **ORM = TypeORM**(엔티티 기반 스키마, dev synchronize) — Prisma에서 전환(친숙도·명시성). prod 전 마이그레이션 전환 예정.
 - [x] **인증**: User 모델 + AuthService(Google/Apple/Kakao id_token 검증 + dev-login) + @nestjs/jwt + JwtAuthGuard. `/auth/login·dev-login·me`.
 - [x] **유저 스코프**: Conversation/Diary → userId, ConversationController 가드, requireConversation(id,userId) 소유권(타인 NotFound). web 하니스는 자동 dev-login으로 토큰 첨부.
 - [x] **테스트 100%**: jest+@swc/jest, 전 서비스 백필(110 tests, 글로벌 100%). 게이트 `pnpm --filter @ai-diary/api test:cov`.
