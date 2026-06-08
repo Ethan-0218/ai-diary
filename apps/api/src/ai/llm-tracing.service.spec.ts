@@ -12,25 +12,23 @@ const ctx: LlmTraceContext = {
 
 describe('LlmTracingService', () => {
   let service: LlmTracingService;
-  let prisma: {
-    llmUsage: { create: jest.Mock };
-    llmCallTrace: { create: jest.Mock };
-  };
+  let usages: { create: jest.Mock; save: jest.Mock };
+  let traces: { create: jest.Mock; save: jest.Mock };
   let errorSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    prisma = {
-      llmUsage: { create: jest.fn().mockResolvedValue({ id: 'row1' }) },
-      llmCallTrace: { create: jest.fn().mockResolvedValue({}) },
-    };
-    service = new LlmTracingService(prisma as any);
+    usages = { create: jest.fn((x) => x), save: jest.fn().mockResolvedValue({ id: 'row1' }) };
+    traces = { create: jest.fn((x) => x), save: jest.fn().mockResolvedValue({}) };
+    service = new LlmTracingService(usages as any, traces as any);
     errorSpy = jest
       .spyOn((service as any).logger, 'error')
       .mockImplementation(() => undefined);
   });
 
+  const savedUsage = (i = 0) => usages.create.mock.calls[i][0];
+
   describe('trace', () => {
-    it('성공: 결과 반환 + usage(inputTokens 등) 기록, errorSummary null, trace payload 저장', async () => {
+    it('성공: 결과 반환 + usage 기록, errorSummary null, trace payload 저장', async () => {
       const result = {
         text: 'hi',
         finishReason: 'stop',
@@ -40,40 +38,32 @@ describe('LlmTracingService', () => {
       await flush();
 
       expect(out).toBe(result);
-      expect(prisma.llmUsage.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: 'success',
-            inputTokens: 10,
-            outputTokens: 5,
-            cacheReadTokens: 2,
-            costUsd: 0.0012,
-            errorSummary: null,
-          }),
-        }),
-      );
-      expect(prisma.llmCallTrace.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ responsePayload: expect.any(String) }),
-        }),
-      );
+      expect(savedUsage()).toMatchObject({
+        status: 'success',
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 2,
+        costUsd: 0.0012,
+        errorSummary: null,
+      });
+      expect(usages.save).toHaveBeenCalled();
+      expect(traces.create.mock.calls[0][0].responsePayload).toEqual(expect.any(String));
     });
 
     it('usage 없으면 0, promptTokens/completionTokens 폴백', async () => {
-      await service.trace(ctx, {}, async () => ({})); // usage 없음 → 0,0,0
+      await service.trace(ctx, {}, async () => ({}));
       await service.trace(ctx, {}, async () => ({
         usage: { promptTokens: 7, completionTokens: 3, cacheReadTokens: 1 },
       }));
       await flush();
-      const calls = prisma.llmUsage.create.mock.calls.map((c) => c[0].data);
-      expect(calls[0]).toMatchObject({ inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 });
-      expect(calls[1]).toMatchObject({ inputTokens: 7, outputTokens: 3, cacheReadTokens: 1 });
+      expect(savedUsage(0)).toMatchObject({ inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 });
+      expect(savedUsage(1)).toMatchObject({ inputTokens: 7, outputTokens: 3, cacheReadTokens: 1 });
     });
 
     it('비유한 토큰(Infinity)은 0으로', async () => {
       await service.trace(ctx, {}, async () => ({ usage: { inputTokens: Infinity } }));
       await flush();
-      expect(prisma.llmUsage.create.mock.calls[0][0].data.inputTokens).toBe(0);
+      expect(savedUsage().inputTokens).toBe(0);
     });
 
     it('실패(Error): failure 기록 + errorSummary=메시지 + 재throw', async () => {
@@ -83,11 +73,7 @@ describe('LlmTracingService', () => {
         }),
       ).rejects.toThrow('boom');
       await flush();
-      expect(prisma.llmUsage.create.mock.calls[0][0].data).toMatchObject({
-        status: 'failure',
-        errorSummary: 'boom',
-        inputTokens: 0,
-      });
+      expect(savedUsage()).toMatchObject({ status: 'failure', errorSummary: 'boom', inputTokens: 0 });
     });
 
     it('실패(비Error 값): String 변환', async () => {
@@ -97,7 +83,7 @@ describe('LlmTracingService', () => {
         }),
       ).rejects.toBe('plain-string');
       await flush();
-      expect(prisma.llmUsage.create.mock.calls[0][0].data.errorSummary).toBe('plain-string');
+      expect(savedUsage().errorSummary).toBe('plain-string');
     });
   });
 
@@ -112,46 +98,27 @@ describe('LlmTracingService', () => {
         status: 'success',
       });
       await flush();
-      expect(prisma.llmUsage.create.mock.calls[0][0].data).toMatchObject({
-        status: 'success',
-        inputTokens: 1,
-        outputTokens: 2,
-        cacheReadTokens: 3,
-      });
-      expect(prisma.llmCallTrace.create.mock.calls[0][0].data.responsePayload).toEqual(
-        expect.any(String),
-      );
+      expect(savedUsage()).toMatchObject({ status: 'success', inputTokens: 1, outputTokens: 2, cacheReadTokens: 3 });
+      expect(traces.create.mock.calls[0][0].responsePayload).toEqual(expect.any(String));
     });
 
     it('status=failure인데 response.error 없으면 errorSummary=unknown', async () => {
-      service.record({
-        ctx,
-        durationMs: 10,
-        usage: {},
-        request: {},
-        response: {},
-        status: 'failure',
-      });
+      service.record({ ctx, durationMs: 10, usage: {}, request: {}, response: {}, status: 'failure' });
       await flush();
-      expect(prisma.llmUsage.create.mock.calls[0][0].data.errorSummary).toBe('unknown');
+      expect(savedUsage().errorSummary).toBe('unknown');
     });
 
     it('status 생략→success 기본, usage 빈값→0, response null→payload null', async () => {
       service.record({ ctx, durationMs: 50, usage: {}, request: {}, response: null });
       await flush();
-      expect(prisma.llmUsage.create.mock.calls[0][0].data).toMatchObject({
-        status: 'success',
-        inputTokens: 0,
-        outputTokens: 0,
-        cacheReadTokens: 0,
-      });
-      expect(prisma.llmCallTrace.create.mock.calls[0][0].data.responsePayload).toBeNull();
+      expect(savedUsage()).toMatchObject({ status: 'success', inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 });
+      expect(traces.create.mock.calls[0][0].responsePayload).toBeNull();
     });
   });
 
   describe('persist 에러 처리 / 직렬화', () => {
     it('DB write 실패 시 logger.error (throw 안 함)', async () => {
-      prisma.llmUsage.create.mockRejectedValue(new Error('db down'));
+      usages.save.mockRejectedValue(new Error('db down'));
       const out = await service.trace(ctx, {}, async () => ({ text: 'ok' }));
       await flush();
       expect(out).toEqual({ text: 'ok' });
@@ -161,7 +128,7 @@ describe('LlmTracingService', () => {
     it('bigint 포함 payload는 Number로 직렬화', async () => {
       await service.trace(ctx, { big: 10n } as any, async () => ({ text: 'x' }));
       await flush();
-      expect(prisma.llmCallTrace.create.mock.calls[0][0].data.requestPayload).toContain('10');
+      expect(traces.create.mock.calls[0][0].requestPayload).toContain('10');
     });
 
     it('순환 참조 payload는 unserializable로 폴백', async () => {
@@ -169,7 +136,7 @@ describe('LlmTracingService', () => {
       circular.self = circular;
       await service.trace(ctx, circular, async () => ({ text: 'x' }));
       await flush();
-      expect(prisma.llmCallTrace.create.mock.calls[0][0].data.requestPayload).toBe(
+      expect(traces.create.mock.calls[0][0].requestPayload).toBe(
         JSON.stringify({ unserializable: true }),
       );
     });

@@ -9,8 +9,6 @@
     "mobile": "pnpm --dir apps/mobile start",
     "ios": "pnpm --dir apps/mobile ios",
     "build": "pnpm --filter @ai-diary/shared build && pnpm --filter @ai-diary/api build && pnpm --filter @ai-diary/web build",
-    "db:migrate": "pnpm --filter @ai-diary/api prisma migrate dev",
-    "db:studio": "pnpm --filter @ai-diary/api prisma studio",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

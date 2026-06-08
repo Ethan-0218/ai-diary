@@ -1,19 +1,19 @@
 import { UserService } from './user.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 describe('UserService', () => {
   let service: UserService;
-  let prisma: { user: { upsert: jest.Mock; findUnique: jest.Mock } };
+  let repo: { upsert: jest.Mock; findOneOrFail: jest.Mock; findOne: jest.Mock };
 
   beforeEach(() => {
-    prisma = { user: { upsert: jest.fn(), findUnique: jest.fn() } };
-    service = new UserService(prisma as unknown as PrismaService);
+    repo = { upsert: jest.fn(), findOneOrFail: jest.fn(), findOne: jest.fn() };
+    service = new UserService(repo as any);
   });
 
   describe('upsertByProvider', () => {
-    it('email/name이 있으면 그대로 upsert', async () => {
+    it('email/name이 있으면 그대로 upsert 후 조회', async () => {
       const row = { id: 'u1' };
-      prisma.user.upsert.mockResolvedValue(row);
+      repo.upsert.mockResolvedValue({});
+      repo.findOneOrFail.mockResolvedValue(row);
 
       const result = await service.upsertByProvider({
         provider: 'google',
@@ -23,35 +23,34 @@ describe('UserService', () => {
       });
 
       expect(result).toBe(row);
-      expect(prisma.user.upsert).toHaveBeenCalledWith({
-        where: { provider_providerId: { provider: 'google', providerId: 'g-123' } },
-        create: { provider: 'google', providerId: 'g-123', email: 'a@b.com', name: '지우' },
-        update: { email: 'a@b.com', name: '지우' },
+      expect(repo.upsert).toHaveBeenCalledWith(
+        { provider: 'google', providerId: 'g-123', email: 'a@b.com', name: '지우' },
+        ['provider', 'providerId'],
+      );
+      expect(repo.findOneOrFail).toHaveBeenCalledWith({
+        where: { provider: 'google', providerId: 'g-123' },
       });
     });
 
     it('email/name이 없으면 null로 채워 upsert', async () => {
-      prisma.user.upsert.mockResolvedValue({ id: 'u2' });
+      repo.upsert.mockResolvedValue({});
+      repo.findOneOrFail.mockResolvedValue({ id: 'u2' });
 
       await service.upsertByProvider({ provider: 'dev', providerId: 'd-1' });
 
-      expect(prisma.user.upsert).toHaveBeenCalledWith({
-        where: { provider_providerId: { provider: 'dev', providerId: 'd-1' } },
-        create: { provider: 'dev', providerId: 'd-1', email: null, name: null },
-        update: { email: null, name: null },
-      });
+      expect(repo.upsert).toHaveBeenCalledWith(
+        { provider: 'dev', providerId: 'd-1', email: null, name: null },
+        ['provider', 'providerId'],
+      );
     });
   });
 
   describe('findById', () => {
-    it('id로 findUnique 호출', async () => {
+    it('id로 findOne 호출', async () => {
       const row = { id: 'u1' };
-      prisma.user.findUnique.mockResolvedValue(row);
-
-      const result = await service.findById('u1');
-
-      expect(result).toBe(row);
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' } });
+      repo.findOne.mockResolvedValue(row);
+      expect(await service.findById('u1')).toBe(row);
+      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 'u1' } });
     });
   });
 });

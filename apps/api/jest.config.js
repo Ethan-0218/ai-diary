@@ -3,6 +3,8 @@
 module.exports = {
   rootDir: 'src',
   testEnvironment: 'node',
+  setupFiles: ['reflect-metadata'], // TypeORM/Nest 데코레이터 메타데이터
+
   moduleFileExtensions: ['js', 'json', 'ts'],
   testRegex: '.*\\.spec\\.ts$',
   // jose(v6)는 ESM 전용이라 jest의 require에서 깨진다 → @swc/jest로 변환되도록 ignore에서 제외.
@@ -24,6 +26,8 @@ module.exports = {
     '!**/*.spec.ts',
     '!main.ts', // 부트스트랩
     '!**/*.module.ts', // DI 와이어링
+    '!**/*.entity.ts', // 선언적 스키마 (TypeORM 엔티티)
+    '!entities/index.ts', // 배럴
   ],
   coverageDirectory: '../coverage',
   coverageThreshold: {

@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { generateText } from 'ai';
 import { v4 as uuid } from 'uuid';
 import {
@@ -10,7 +12,14 @@ import {
   type CostSummary,
   type LlmStep,
 } from '@ai-diary/shared';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  Conversation,
+  Message,
+  Attachment,
+  Diary,
+  Feedback,
+  LlmUsage,
+} from '../entities';
 import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 import { WeatherService } from '../ai/weather.service';
@@ -23,7 +32,17 @@ function publicBase(): string {
 @Injectable()
 export class ConversationService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Conversation)
+    private readonly conversations: Repository<Conversation>,
+    @InjectRepository(Message)
+    private readonly messages: Repository<Message>,
+    @InjectRepository(Attachment)
+    private readonly attachments: Repository<Attachment>,
+    @InjectRepository(Diary) private readonly diaries: Repository<Diary>,
+    @InjectRepository(Feedback)
+    private readonly feedbacks: Repository<Feedback>,
+    @InjectRepository(LlmUsage)
+    private readonly llmUsages: Repository<LlmUsage>,
     private readonly ai: AiService,
     private readonly tracing: LlmTracingService,
     private readonly weather: WeatherService,
@@ -49,9 +68,8 @@ export class ConversationService {
       );
     }
 
-    const conv = await this.prisma.conversation.create({
-      data: {
-        id: uuid(),
+    const conv = await this.conversations.save(
+      this.conversations.create({
         userId,
         title,
         format,
@@ -59,8 +77,8 @@ export class ConversationService {
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
         weatherNote,
-      },
-    });
+      }),
+    );
 
     const traceId = uuid();
     const system = buildChatSystem(format, now, weatherNote, null, true);
@@ -87,25 +105,22 @@ export class ConversationService {
         }),
     );
 
-    await this.prisma.message.create({
-      data: {
+    await this.messages.save(
+      this.messages.create({
         conversationId: conv.id,
         role: 'assistant',
         content: result.text,
-      },
-    });
+      }),
+    );
 
     return this.getDetail(conv.id, userId);
   }
 
   async list(userId: string): Promise<ConversationSummary[]> {
-    const convs = await this.prisma.conversation.findMany({
+    const convs = await this.conversations.find({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        diary: { select: { id: true } },
-        llmUsages: { select: { costUsd: true } },
-      },
+      order: { createdAt: 'DESC' },
+      relations: ['diary', 'llmUsages'],
     });
     return convs.map((c) => ({
       id: c.id,
@@ -113,24 +128,21 @@ export class ConversationService {
       format: c.format as DiaryFormat,
       modelId: c.modelId,
       createdAt: c.createdAt.toISOString(),
-      totalUsd: round6(c.llmUsages.reduce((s, u) => s + u.costUsd, 0)),
+      totalUsd: round6((c.llmUsages ?? []).reduce((s, u) => s + u.costUsd, 0)),
       hasDiary: !!c.diary,
     }));
   }
 
   async getDetail(id: string, userId: string): Promise<ConversationDetail> {
-    const c = await this.prisma.conversation.findUnique({
+    const c = await this.conversations.findOne({
       where: { id },
-      include: {
-        messages: { orderBy: { createdAt: 'asc' } },
-        attachments: { orderBy: { createdAt: 'asc' } },
-        diary: true,
-        feedback: true,
-      },
+      relations: ['messages', 'attachments', 'diary', 'feedback'],
     });
     if (!c || c.userId !== userId) {
       throw new NotFoundException('conversation not found');
     }
+    const messages = [...c.messages].sort(byCreatedAtAsc);
+    const attachments = [...c.attachments].sort(byCreatedAtAsc);
     return {
       id: c.id,
       title: c.title,
@@ -139,14 +151,14 @@ export class ConversationService {
       createdAt: c.createdAt.toISOString(),
       weatherNote: c.weatherNote ?? null,
       collectionState: parseCollectionState(c.collectionState),
-      messages: c.messages.map((m) => ({
+      messages: messages.map((m) => ({
         id: m.id,
         role: m.role as 'user' | 'assistant',
         content: m.content,
         parts: m.parts ? JSON.parse(m.parts) : null,
         createdAt: m.createdAt.toISOString(),
       })),
-      attachments: c.attachments.map((a) => ({
+      attachments: attachments.map((a) => ({
         id: a.id,
         url: `${publicBase()}/uploads/${a.filePath}`,
         caption: a.caption,
@@ -177,14 +189,13 @@ export class ConversationService {
     await this.requireConversation(conversationId, userId);
     const trimmed = content.trim();
     if (!trimmed) {
-      await this.prisma.feedback.deleteMany({ where: { conversationId } });
+      await this.feedbacks.delete({ conversationId });
       return { feedback: null };
     }
-    const fb = await this.prisma.feedback.upsert({
-      where: { conversationId },
-      create: { conversationId, content: trimmed },
-      update: { content: trimmed },
-    });
+    await this.feedbacks.upsert({ conversationId, content: trimmed }, [
+      'conversationId',
+    ]);
+    const fb = await this.feedbacks.findOneOrFail({ where: { conversationId } });
     return {
       feedback: {
         id: fb.id,
@@ -196,8 +207,8 @@ export class ConversationService {
   }
 
   /** 대화를 로드하되, 소유자(userId)가 아니면 NotFound (존재 노출 방지). */
-  async requireConversation(id: string, userId: string) {
-    const c = await this.prisma.conversation.findUnique({ where: { id } });
+  async requireConversation(id: string, userId: string): Promise<Conversation> {
+    const c = await this.conversations.findOne({ where: { id } });
     if (!c || c.userId !== userId) {
       throw new NotFoundException('conversation not found');
     }
@@ -216,27 +227,27 @@ export class ConversationService {
       nextGap: patch.nextGap,
       updatedAt: new Date().toISOString(),
     };
-    await this.prisma.conversation.update({
-      where: { id },
-      data: { collectionState: JSON.stringify(state) },
-    });
+    await this.conversations.update(
+      { id },
+      { collectionState: JSON.stringify(state) },
+    );
     return state;
   }
 
-  async saveMessage(
+  saveMessage(
     conversationId: string,
     role: 'user' | 'assistant',
     content: string,
     parts?: unknown,
   ) {
-    return this.prisma.message.create({
-      data: {
+    return this.messages.save(
+      this.messages.create({
         conversationId,
         role,
         content,
         parts: parts ? JSON.stringify(parts) : null,
-      },
-    });
+      }),
+    );
   }
 
   /** 일기 생성/수정에 공통으로 쓰는 컨텍스트(대화 transcript, 사진 설명, system 프롬프트) */
@@ -245,11 +256,11 @@ export class ConversationService {
     const format = conv.format as DiaryFormat;
     const def = getFormatDef(format);
     const [messages, attachments] = await Promise.all([
-      this.prisma.message.findMany({
+      this.messages.find({
         where: { conversationId: id },
-        orderBy: { createdAt: 'asc' },
+        order: { createdAt: 'ASC' },
       }),
-      this.prisma.attachment.findMany({ where: { conversationId: id } }),
+      this.attachments.find({ where: { conversationId: id } }),
     ]);
 
     const transcript = messages
@@ -278,10 +289,11 @@ export class ConversationService {
     format: DiaryFormat,
     content: string,
   ) {
-    const diary = await this.prisma.diary.upsert({
+    await this.diaries.upsert({ conversationId: id, format, content }, [
+      'conversationId',
+    ]);
+    const diary = await this.diaries.findOneOrFail({
       where: { conversationId: id },
-      create: { conversationId: id, format, content },
-      update: { content, format },
     });
     const costs = await this.getCosts(id, userId);
     return {
@@ -320,7 +332,7 @@ export class ConversationService {
   async reviseDiary(id: string, userId: string, instruction: string) {
     const { conv, format, transcript, photoNotes, system } =
       await this.buildDiaryContext(id, userId);
-    const existing = await this.prisma.diary.findUnique({
+    const existing = await this.diaries.findOne({
       where: { conversationId: id },
     });
     if (!existing) {
@@ -355,9 +367,9 @@ export class ConversationService {
 
   async getCosts(id: string, userId: string): Promise<CostSummary> {
     await this.requireConversation(id, userId);
-    const usages = await this.prisma.llmUsage.findMany({
+    const usages = await this.llmUsages.find({
       where: { conversationId: id },
-      orderBy: { createdAt: 'asc' },
+      order: { createdAt: 'ASC' },
     });
 
     const steps: LlmStep[] = [
@@ -444,14 +456,14 @@ export class ConversationService {
       caption = null;
     }
 
-    const attachment = await this.prisma.attachment.create({
-      data: {
+    const attachment = await this.attachments.save(
+      this.attachments.create({
         conversationId,
         filePath: file.filename,
         mimeType: file.mimetype,
         caption,
-      },
-    });
+      }),
+    );
 
     return {
       id: attachment.id,
@@ -461,6 +473,10 @@ export class ConversationService {
       createdAt: attachment.createdAt.toISOString(),
     };
   }
+}
+
+function byCreatedAtAsc(a: { createdAt: Date }, b: { createdAt: Date }): number {
+  return a.createdAt.getTime() - b.createdAt.getTime();
 }
 
 function formatDate(d: Date): string {

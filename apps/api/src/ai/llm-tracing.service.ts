@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { calcCost, type LlmStep, type LlmCallStatus } from '@ai-diary/shared';
-import { PrismaService } from '../prisma/prisma.service';
+import { LlmUsage, LlmCallTrace } from '../entities';
 
 export interface LlmTraceContext {
   traceId: string;
@@ -33,7 +35,12 @@ interface UsageNumbers {
 export class LlmTracingService {
   private readonly logger = new Logger(LlmTracingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(LlmUsage)
+    private readonly llmUsages: Repository<LlmUsage>,
+    @InjectRepository(LlmCallTrace)
+    private readonly llmCallTraces: Repository<LlmCallTrace>,
+  ) {}
 
   /** 비스트리밍(generateText) 호출 wrap */
   async trace<T>(
@@ -112,8 +119,8 @@ export class LlmTracingService {
   }): Promise<void> {
     const { ctx, usage } = input;
     const costUsd = calcCost(ctx.modelId, usage.inputTokens, usage.outputTokens);
-    const row = await this.prisma.llmUsage.create({
-      data: {
+    const row = await this.llmUsages.save(
+      this.llmUsages.create({
         traceId: ctx.traceId,
         conversationId: ctx.conversationId,
         step: ctx.step,
@@ -128,16 +135,16 @@ export class LlmTracingService {
           input.status === 'failure'
             ? String((input.response as any)?.error ?? 'unknown')
             : null,
-      },
-    });
-    await this.prisma.llmCallTrace.create({
-      data: {
+      }),
+    );
+    await this.llmCallTraces.save(
+      this.llmCallTraces.create({
         llmUsageId: row.id,
         traceId: ctx.traceId,
         requestPayload: safeJson(input.request),
         responsePayload: input.response ? safeJson(input.response) : null,
-      },
-    });
+      }),
+    );
   }
 }
 
