@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,13 +12,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { launchImageLibrary, type Asset } from 'react-native-image-picker';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { getFormatDef, type ConversationDetail } from '@ai-diary/shared';
 import { api, API_BASE, absoluteUrl, getAuthToken, type RNFile } from '../lib/api';
+import { toUserMessage } from '../lib/errors';
+import { pickPhoto } from '../lib/photo-picker';
 import { detectSignals, stripLeakedToolJson } from '../lib/chat-signals';
-import { Badge, Button, Card } from '../components/ui';
+import { Badge, Button, Card, ErrorState } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -27,19 +28,19 @@ export function ChatScreen({ route, navigation }: RootScreenProps<'Chat'>) {
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setError(null);
+    setDetail(null);
     api
       .getConversation(conversationId)
       .then(setDetail)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(toUserMessage(e)));
   }, [conversationId]);
 
+  useEffect(load, [load]);
+
   if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>불러오기 실패: {error}</Text>
-      </View>
-    );
+    return <ErrorState message={error} onRetry={load} />;
   }
   if (!detail) {
     return (
@@ -111,16 +112,13 @@ function ChatView({
     return () => clearTimeout(t);
   }, [messages, busy]);
 
-  const pickPhoto = async () => {
-    const res = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 });
-    const asset: Asset | undefined = res.assets?.[0];
-    if (!asset?.uri) return;
-    const file: RNFile = {
-      uri: asset.uri,
-      type: asset.type ?? 'image/jpeg',
-      name: asset.fileName ?? `photo-${Date.now()}.jpg`,
-    };
-    setPending({ file, preview: asset.uri });
+  const onPickPhoto = async () => {
+    try {
+      const file = await pickPhoto();
+      if (file) setPending({ file, preview: file.uri });
+    } catch (e) {
+      Alert.alert('사진 추가 실패', toUserMessage(e));
+    }
   };
 
   const onSend = async () => {
@@ -144,7 +142,7 @@ function ChatView({
           ],
         } as any);
       } catch (e: any) {
-        Alert.alert('업로드 실패', e?.message ?? String(e));
+        Alert.alert('업로드 실패', toUserMessage(e));
         inputTextRef.current = text;
         inputRef.current?.setNativeProps({ text });
         setPending(photo);
@@ -163,7 +161,7 @@ function ChatView({
       await api.generateDiary(detail.id);
       navigation.replace('Diary', { conversationId: detail.id });
     } catch (e: any) {
-      Alert.alert('일기 생성 실패', e?.message ?? String(e));
+      Alert.alert('일기 생성 실패', toUserMessage(e));
       setBusyDiary(false);
     }
   };
@@ -234,7 +232,7 @@ function ChatView({
 
         <View style={styles.inputRow}>
           <Pressable
-            onPress={pickPhoto}
+            onPress={onPickPhoto}
             disabled={uploading}
             style={[styles.iconBtn, signals.photo && styles.iconBtnHighlighted]}
           >

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -15,8 +15,10 @@ import {
   type ConversationSummary,
 } from '@ai-diary/shared';
 import { api } from '../lib/api';
+import { getCurrentCoords } from '../lib/location';
+import { toUserMessage } from '../lib/errors';
 import { useAuth } from '../auth/AuthContext';
-import { Badge, Button, Card } from '../components/ui';
+import { Badge, Button, Card, ErrorState } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -25,7 +27,20 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
   const [format, setFormat] = useState<DiaryFormat>('plain');
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL_ID);
   const [history, setHistory] = useState<ConversationSummary[]>([]);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  const loadHistory = useCallback(() => {
+    api
+      .listConversations()
+      .then((h) => {
+        setHistory(h);
+        setHistoryError(null);
+      })
+      .catch((e) => setHistoryError(toUserMessage(e)))
+      .finally(() => setHistoryLoaded(true));
+  }, []);
 
   // 헤더 우측 로그아웃
   useLayoutEffect(() => {
@@ -40,20 +55,19 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
 
   // 화면 포커스마다 히스토리 갱신(일기 완성 후 돌아왔을 때 상태 반영)
   useEffect(() => {
-    const unsub = navigation.addListener('focus', () => {
-      api.listConversations().then(setHistory).catch(() => {});
-    });
+    const unsub = navigation.addListener('focus', loadHistory);
     return unsub;
-  }, [navigation]);
+  }, [navigation, loadHistory]);
 
   const start = async () => {
     setCreating(true);
     try {
-      // 위치(날씨)는 1차 생략 — 좌표 없이 생성. (geolocation은 후속)
-      const conv = await api.createConversation(format, modelId);
+      // 위치는 부가 기능 — JIT로 권한 요청해 좌표만 얻고(거부/실패=null), 날씨는 백엔드가 처리.
+      const coords = await getCurrentCoords();
+      const conv = await api.createConversation(format, modelId, coords ?? undefined);
       navigation.navigate('Chat', { conversationId: conv.id });
     } catch (e: any) {
-      Alert.alert('대화 생성 실패', e?.message ?? String(e));
+      Alert.alert('대화 생성 실패', toUserMessage(e));
     } finally {
       setCreating(false);
     }
@@ -120,7 +134,11 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
       </Card>
 
       <Text style={[styles.sectionTitle, { marginTop: 28 }]}>대화 히스토리</Text>
-      {history.length === 0 ? (
+      {historyError ? (
+        <ErrorState message={historyError} onRetry={loadHistory} inline />
+      ) : !historyLoaded ? (
+        <Text style={styles.muted}>불러오는 중…</Text>
+      ) : history.length === 0 ? (
         <Text style={styles.muted}>아직 대화가 없습니다.</Text>
       ) : (
         <View style={{ gap: spacing.sm }}>

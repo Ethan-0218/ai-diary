@@ -7,6 +7,7 @@ import type {
   FeedbackDto,
 } from '@ai-diary/shared';
 import { API_BASE } from './config';
+import { ApiError, notifyUnauthorized } from './errors';
 
 export { API_BASE };
 
@@ -35,11 +36,14 @@ export function getAuthToken(): string | null {
 async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = { ...(init.headers as any) };
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
-  return fetch(url, { ...init, headers });
+  const res = await fetch(url, { ...init, headers });
+  // 인증된 요청이 401이면 토큰이 만료/무효 → 자동 로그아웃 트리거(로그인 화면으로).
+  if (res.status === 401 && authToken) notifyUnauthorized();
+  return res;
 }
 
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ''));
   return res.json() as Promise<T>;
 }
 

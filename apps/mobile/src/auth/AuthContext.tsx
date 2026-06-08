@@ -9,6 +9,7 @@ import React, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { authApi, setAuthToken, type AuthUser } from '../lib/api';
+import { setUnauthorizedHandler } from '../lib/errors';
 
 const TOKEN_KEY = 'aidiary.accessToken';
 const USER_KEY = 'aidiary.user';
@@ -83,6 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('guest');
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
   };
+
+  // API 레이어가 401(토큰 만료)을 만나면 자동 로그아웃하도록 핸들러 등록.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void signOut();
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({ status, user, signInWithApple, devLogin, signOut }),
