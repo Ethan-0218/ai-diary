@@ -1,44 +1,89 @@
 /**
- * AI 일기 mobile — S2 연동 검증용 임시 화면.
- * @ai-diary/shared(웹/백엔드와 공유)를 import해서 모노레포 연결을 확인한다.
+ * AI 일기 — 앱 루트.
+ * 인증 게이트(AuthContext) → 미인증=Login / 인증=코어 스택(Home→Chat→Diary).
  *
  * @format
  */
+import React from 'react';
+import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, useColorScheme } from 'react-native';
-import { DIARY_FORMAT_LIST, MODEL_OPTIONS } from '@ai-diary/shared';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import type { RootStackParamList } from './src/navigation/types';
+import { colors } from './src/theme';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { ChatScreen } from './src/screens/ChatScreen';
+import { DiaryScreen } from './src/screens/DiaryScreen';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+function RootNavigator() {
+  const { status } = useAuth();
+
+  if (status === 'loading') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>AI 일기 — 모노레포 연동 OK</Text>
-        <Text style={styles.subtitle}>@ai-diary/shared 를 mobile에서 import</Text>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.bg },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      {status === 'guest' ? (
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+      ) : (
+        <>
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{ title: 'AI 일기' }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ title: '오늘 이야기' }}
+          />
+          <Stack.Screen
+            name="Diary"
+            component={DiaryScreen}
+            options={{ title: '일기' }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
 
-        <Text style={styles.section}>일기 형식 ({DIARY_FORMAT_LIST.length})</Text>
-        {DIARY_FORMAT_LIST.map(f => (
-          <Text key={f.id} style={styles.item}>• {f.id} — {f.label}</Text>
-        ))}
-
-        <Text style={styles.section}>모델 옵션 ({MODEL_OPTIONS.length})</Text>
-        {MODEL_OPTIONS.map(m => (
-          <Text key={m.id} style={styles.item}>• {m.id}</Text>
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+function App() {
+  return (
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <AuthProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 24, gap: 6 },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 2 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 16 },
-  section: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 4 },
-  item: { fontSize: 15, color: '#222' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
 });
 
 export default App;

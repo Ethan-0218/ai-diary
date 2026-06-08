@@ -113,6 +113,31 @@ TestFlight엔 두 종류:
 - [x] **테스트 100%**: jest+@swc/jest, 전 서비스 백필(110 tests, 글로벌 100%). 게이트 `pnpm --filter @ai-diary/api test:cov`.
 - **남은 것**: 기억(M3, pgvector 벡터검색) · OAuth 실제 client id 연결(앱 등록 후, 현재 dev-login으로 대체) · 실 모바일 로그인 UI=S3.4.
 - S3.3 상세: _(위 — 백엔드 핵심 완료, 기억은 M3)_
-- S3.4 상세: _(아직)_
+### S3.4 상세 — 프론트엔드(모바일 UI) (2026-06-08, 진행 중)
+> **목표**: web 하니스에서 검증된 **대화→일기 코어 루프**(Home→Chat→Diary)를 RN 앱(`apps/mobile`)으로 충실히 이식. S3.1 적응형 홈·책장·스토어·온보딩은 코어가 기기에서 돌면 단계적으로 올림(커머스/IAP=S4).
+> **결정(2026-06-08)**: ① 1차 범위 = **코어 루프 충실 포팅**(web 3화면 1:1). ② 로그인 = **실 소셜로그인 먼저, Apple 우선**(App Store 검수 필수·iOS 네이티브·audience=Bundle ID). ③ 외부 OAuth 자격증명은 유저 콘솔 작업 안내 후 `.env` 주입.
+
+**네비게이션 — React Navigation Native Stack**
+- 인증 게이트: `AuthContext`(토큰 AsyncStorage 보관) → 미인증=`Login`, 인증=코어 스택.
+- 코어 스택: `Home`(포맷·모델 선택 + 히스토리) → `Chat {conversationId}`(스트리밍 대화) → `Diary {conversationId}`(일기 뷰/수정/피드백). web `page.tsx`/`Chat.tsx`/`diary/[id]` 1:1 대응.
+
+**백엔드 계약(이미 존재, web과 공유)**
+- `POST /auth/login {provider, token}` — Apple=identityToken(id_token), aud=Bundle ID `com.ai-diary.app` → 백엔드 `APPLE_CLIENT_ID`로 검증. (개발 중 코어 루프 언블락용 dev-login은 `__DEV__` 한정 escape hatch)
+- `POST /conversations`(+위치) · `GET /conversations[/:id][/costs]` · `POST /conversations/:id/chat`(**AI SDK UI message stream**, 시그널=tool part `requestPhoto`/`updateCollectionState.enough`) · `POST .../diary[/revise]` · `POST .../feedback` · `POST .../attachments`(multipart).
+
+**기술 결정**
+- **스트리밍 대화**: web과 동일하게 `@ai-sdk/react` `useChat` + `ai` `DefaultChatTransport` 재사용(시그널 추출 코드 이식). RN fetch는 스트리밍 body 미지원 → 폴리필(`react-native-polyfill-globals`·`react-native-fetch-api`·`web-streams-polyfill`·`text-encoding`·`react-native-url-polyfill`) index.js 1회 셋업.
+- 사진: `react-native-image-picker` → multipart 업로드(RN FormData `{uri,type,name}`).
+- 일기 렌더: `react-native-markdown-display` + 사진토큰(`![](사진N)`) 치환 로직 이식.
+- 인증: Apple = `@invertase/react-native-apple-authentication`. 토큰 = `@react-native-async-storage/async-storage`.
+- config: `src/lib/config.ts` API_BASE(시뮬=`localhost:9001`, 실기기=LAN IP). theme: web CSS 변수 토큰화.
+
+**빌드 순서**
+- [x] **A. 파운데이션(자격증명 무관)** ✅ — deps+pod(navigation·screens·async-storage·image-picker·apple-auth), `lib/config`·`theme`·`lib/api`(토큰 스토리지)·streaming-polyfill, AuthContext(애플+`__DEV__` dev-login). zod(v4, ai SDK 의존) 위해 babel `@babel/plugin-transform-export-namespace-from` 추가.
+- [x] **B. 코어 3화면** ✅(빌드·부팅·렌더 검증) — Login/Home/Chat(useChat 스트리밍)/Diary(마크다운·수정·피드백). 시뮬레이터 빌드 성공 + Login 화면 렌더(레드박스 0). 순수 로직(chat-signals·photo-tokens·absoluteUrl) 단위테스트 11개 green, tsc 통과.
+  - [x] **실기기 E2E 검증 완료** ✅(2026-06-08, Honey's iPhone) — Apple 로그인 → 대화(스트리밍) → 일기까지 정상 동작 확인. S3.4 끝 기준("앱에서 대화→일기 흐름") 충족.
+- [x] **C. Apple 로그인 — 네이티브/서명 설정 완료** ✅ — Bundle ID `org.reactjs…` → **`com.ai-diary.app`** 전환(Xcode 자동서명, Team=YEONGHAN KWON, 프로비저닝 정상) + **Sign in with Apple** capability/entitlement 추가 + Location(When In Use) usage 설명 채움 + `apps/api/.env` **`APPLE_CLIENT_ID=com.ai-diary.app`**. 새 Bundle ID로 **빌드·설치·부팅·Login 렌더 확인**.
+  - [x] **라이브 라운드트립 검증 완료** ✅(2026-06-08) — 시뮬레이터 Apple ID 로그인 → "Sign in with Apple" 탭 → `/auth/login`(aud=com.ai-diary.app) 검증 → JWT 발급 → 토큰 저장 → Home 진입 + authed `listConversations` 성공.
+- S3.4 상세: _(위 — A·B·C + 실기기 대화→일기 E2E 검증 완료 ✅. 개발환경 이슈도 해결: TransformStream 폴리필, 한글 IME(시뮬 한계→실기기 정상·입력칸 uncontrolled), Metro/API 호스트 자동감지(ip.txt+scriptURL, IP 하드코딩 제거). 남은 다듬기는 S3.5)_
 - S3.5 상세: _(아직)_
 - …

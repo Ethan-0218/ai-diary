@@ -10,3 +10,5 @@ apps/api/prisma/*.db-journal
 
 # 테스트 커버리지 출력
 coverage/
+
+.DS_Store
