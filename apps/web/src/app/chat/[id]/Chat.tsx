@@ -45,8 +45,11 @@ export function Chat({ detail }: { detail: ConversationDetail }) {
 
   const busy = status === 'streaming' || status === 'submitted';
 
-  // 최신 assistant 메시지에서 tool 시그널 추출
-  const signals = useMemo(() => detectSignals(messages), [messages]);
+  // 최신 assistant 메시지에서 tool 시그널 추출 (리로드 시 저장된 수집 상태로 시드)
+  const signals = useMemo(
+    () => detectSignals(messages, detail.collectionState?.enough ?? false),
+    [messages, detail.collectionState],
+  );
 
   const onSend = async () => {
     const text = input.trim();
@@ -376,13 +379,20 @@ function stripLeakedToolJson(text: string): string {
   return cleaned.trim();
 }
 
-/** 마지막 assistant 메시지의 tool part로 사진/일기 제안 시그널 추출 */
-function detectSignals(messages: UIMessage[]): { photo: boolean; diary: boolean } {
+/**
+ * 마지막 assistant 메시지의 tool part로 시그널 추출.
+ * - photo: requestPhoto 호출 여부
+ * - diary: updateCollectionState 의 enough=true (또는 리로드 시드값)
+ */
+function detectSignals(
+  messages: UIMessage[],
+  seedEnough: boolean,
+): { photo: boolean; diary: boolean } {
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-  if (!lastAssistant) return { photo: false, diary: false };
-  const types = (lastAssistant.parts ?? []).map((p: any) => p.type as string);
-  return {
-    photo: types.some((t) => t.startsWith('tool-requestPhoto')),
-    diary: types.some((t) => t.startsWith('tool-offerDiaryDraft')),
-  };
+  const parts = (lastAssistant?.parts ?? []) as any[];
+  const photo = parts.some((p) => (p.type as string)?.startsWith('tool-requestPhoto'));
+  const liveEnough = parts.some(
+    (p) => p.type === 'tool-updateCollectionState' && p.input?.enough === true,
+  );
+  return { photo, diary: liveEnough || seedEnough };
 }

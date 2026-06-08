@@ -50,6 +50,22 @@ export interface DiaryDto {
   createdAt: string;
 }
 
+/**
+ * 인터뷰 수집 상태 — 하이브리드 상태머신(s3.2 §3 A1-c)의 "구조화 꼬리표".
+ * 매 대화 턴 updateCollectionState 툴이 갱신하며 Conversation에 하루 누적된다.
+ */
+export interface CollectionState {
+  /** 유저가 말/확인해 준, 채워진 체크리스트 항목(짧은 라벨) */
+  filled: string[];
+  /** 유저가 꺼리거나 자연스럽게 넘어가 건너뛴 항목 */
+  skipped: string[];
+  /** 일기를 쓸 만큼 충분한가 (능동 제안 트리거) */
+  enough: boolean;
+  /** 다음에 자연스럽게 더 들어보면 좋을 빈 항목 1개(편향용, 강제 아님) */
+  nextGap?: string;
+  updatedAt: string;
+}
+
 export interface FeedbackDto {
   id: string;
   content: string;
@@ -64,6 +80,7 @@ export interface ConversationDetail {
   modelId: string;
   createdAt: string;
   weatherNote: string | null;
+  collectionState: CollectionState | null;
   messages: MessageDto[];
   attachments: AttachmentDto[];
   diary: DiaryDto | null;

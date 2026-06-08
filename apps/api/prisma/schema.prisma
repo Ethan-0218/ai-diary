@@ -15,6 +15,8 @@ model Conversation {
   latitude    Float?
   longitude   Float?
   weatherNote String? // 대화 시작 시점의 현재 위치 날씨 (예: "서울특별시 명동 · 맑음, 27°C (낮)")
+  /// 인터뷰 수집 상태(JSON: CollectionState) — 하루 누적. 매 대화 턴 updateCollectionState 툴이 갱신. (s3.2 §3 A1-c)
+  collectionState String?
   createdAt   DateTime @default(now())
 
   messages    Message[]

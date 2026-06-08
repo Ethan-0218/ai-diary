@@ -23,7 +23,11 @@ import {
 } from 'ai';
 import { z } from 'zod';
 import type { CreateConversationDto, DiaryFormat } from '@ai-diary/shared';
-import { ConversationService, buildChatSystem } from './conversation.service';
+import {
+  ConversationService,
+  buildChatSystem,
+  parseCollectionState,
+} from './conversation.service';
 import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 
@@ -98,7 +102,12 @@ export class ConversationController {
       await this.conv.saveMessage(id, 'user', uiText(lastUser), lastUser.parts);
     }
 
-    const system = buildChatSystem(format, new Date(), conv.weatherNote);
+    const system = buildChatSystem(
+      format,
+      new Date(),
+      conv.weatherNote,
+      parseCollectionState(conv.collectionState),
+    );
     const traceId = uuid();
     const startedAt = Date.now();
 
@@ -124,15 +133,36 @@ export class ConversationController {
           }),
           execute: async ({ reason }) => ({ acknowledged: true, reason }),
         }),
-        offerDiaryDraft: tool({
+        updateCollectionState: tool({
           description:
-            '일기를 쓸 만큼 충분한 이야기가 모였을 때 호출. 프론트가 "일기 완성하기" CTA를 노출한다. ' +
+            '매 대화 턴마다 호출해 인터뷰 수집 상태를 갱신한다(하이브리드 상태머신). ' +
+            'enough가 true가 되면 프론트가 "일기 완성하기" CTA를 강조한다. ' +
             '일기는 한 번에 완성되는 것이며 초안→수정 기능은 없다. 답변 본문에서 "초안"이라 부르지 마라. ' +
-            '이것은 화면에 보이지 않는 내부 신호이므로, 인자(reason)나 JSON을 답변 본문에 절대 출력하지 마라.',
+            '이것은 화면에 보이지 않는 내부 신호이므로, 인자나 JSON을 답변 본문에 절대 출력하지 마라.',
           inputSchema: z.object({
-            reason: z.string().describe('충분하다고 판단한 근거'),
+            filled: z
+              .array(z.string())
+              .describe('유저가 말하거나 추측-확인으로 긍정/수정해 채워진 체크리스트 항목(짧은 라벨). 감정·내면 항목은 유저가 확인한 경우에만.'),
+            skipped: z
+              .array(z.string())
+              .describe('유저가 꺼리거나 자연스럽게 넘어간 항목'),
+            enough: z
+              .boolean()
+              .describe('[충분 판단] 기준을 충족해 일기를 쓸 만한지 여부'),
+            nextGap: z
+              .string()
+              .optional()
+              .describe('다음에 자연스럽게 더 들어보면 좋을 빈 항목 1개(참고용, 강제 아님)'),
           }),
-          execute: async ({ reason }) => ({ acknowledged: true, reason }),
+          execute: async ({ filled, skipped, enough, nextGap }) => {
+            await this.conv.updateCollectionState(id, {
+              filled,
+              skipped,
+              enough,
+              nextGap,
+            });
+            return { acknowledged: true };
+          },
         }),
       },
       onFinish: ({ text, usage, finishReason, toolCalls }) => {
@@ -194,7 +224,13 @@ export class ConversationController {
  */
 export function stripLeakedToolJson(text: string | undefined): string {
   if (!text) return '';
-  const TOOL_KEYS = new Set(['reason']);
+  const TOOL_KEYS = new Set([
+    'reason', // requestPhoto
+    'filled',
+    'skipped',
+    'enough',
+    'nextGap', // updateCollectionState
+  ]);
   const looksLikeToolArg = (s: string): boolean => {
     try {
       const obj = JSON.parse(s);

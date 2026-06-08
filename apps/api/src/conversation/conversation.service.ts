@@ -6,6 +6,7 @@ import {
   type DiaryFormat,
   type ConversationSummary,
   type ConversationDetail,
+  type CollectionState,
   type CostSummary,
   type LlmStep,
 } from '@ai-diary/shared';
@@ -57,7 +58,7 @@ export class ConversationService {
     });
 
     const traceId = uuid();
-    const system = buildChatSystem(format, now, weatherNote);
+    const system = buildChatSystem(format, now, weatherNote, null, true);
     const nowTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     const weatherLine = weatherNote
       ? `현재 날씨는 "${weatherNote}"이다. 인사에 날씨를 자연스럽게 한마디 곁들여도 좋다. ` +
@@ -129,6 +130,7 @@ export class ConversationService {
       modelId: c.modelId,
       createdAt: c.createdAt.toISOString(),
       weatherNote: c.weatherNote ?? null,
+      collectionState: parseCollectionState(c.collectionState),
       messages: c.messages.map((m) => ({
         id: m.id,
         role: m.role as 'user' | 'assistant',
@@ -191,6 +193,25 @@ export class ConversationService {
     return c;
   }
 
+  /** 하이브리드 상태머신(s3.2 §3): 매 대화 턴 updateCollectionState 툴이 부른다. 하루 누적. */
+  async updateCollectionState(
+    id: string,
+    patch: Omit<CollectionState, 'updatedAt'>,
+  ): Promise<CollectionState> {
+    const state: CollectionState = {
+      filled: patch.filled ?? [],
+      skipped: patch.skipped ?? [],
+      enough: !!patch.enough,
+      nextGap: patch.nextGap,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.prisma.conversation.update({
+      where: { id },
+      data: { collectionState: JSON.stringify(state) },
+    });
+    return state;
+  }
+
   async saveMessage(
     conversationId: string,
     role: 'user' | 'assistant',
@@ -233,7 +254,8 @@ export class ConversationService {
       `${def.diaryPrompt}\n\n오늘 날짜: ${formatDate(now)}\n\n` +
       `[시간 순서] 대화에서 사건이 일어난 순서가 분명하지 않으면, 임의의 시간 순서로 단정해 서술하지 마라. ` +
       `유저가 명시한 순서만 시간순으로 쓰고, 불확실하면 "A도 하고 B도 했다"처럼 순서를 단정짓지 말고 자연스럽게 엮는다. ` +
-      `(이 원칙은 문체/표현의 윤색과 무관하게, 사실관계인 사건의 전후 순서에만 적용된다.)`;
+      `(이 원칙은 문체/표현의 윤색과 무관하게, 사실관계인 사건의 전후 순서에만 적용된다.)\n\n` +
+      `[대화 메타 발언 제외] 대화를 진행·종료하기 위한 발언("이쯤이면 충분", "그만 얘기할래", "일기 써줘" 등)은 그날 하루의 사건/감정이 아니므로 일기 본문에 넣지 마라. 일기에는 하루의 경험과 감상만 담는다.`;
 
     return { conv, format, def, transcript, photoNotes, system };
   }
@@ -435,6 +457,8 @@ export function buildChatSystem(
   format: DiaryFormat,
   now: Date,
   weatherNote?: string | null,
+  collectionState?: CollectionState | null,
+  forGreeting = false,
 ): string {
   const def = getFormatDef(format);
   const checklist = def.requiredInfo.map((x) => `- ${x}`).join('\n');
@@ -443,16 +467,59 @@ export function buildChatSystem(
       `- 위 날씨는 유저의 현재 위치 기준 실제 정보다. 대화/일기에 자연스럽게 활용해도 된다.\n` +
       `- 단, 주어진 이 정보 외의 날씨(예보, 다른 지역 등)를 지어내지 마라.\n\n`
     : `[날씨] 날씨 정보가 주어지지 않았다. 날씨를 아는 척 추측하거나 지어내지 마라.\n\n`;
+
+  // 하루 누적 상태 주입 — 재진입 시 이미 모은 것을 인지하고 "이어서" 잇도록.
+  const stateBlock = collectionState
+    ? `[지금까지 모은 것 — 하루에 걸쳐 누적됨]\n` +
+      `- 이미 채워진 항목: ${collectionState.filled.length ? collectionState.filled.join(', ') : '(없음)'}\n` +
+      `- 유저가 넘어간 항목: ${collectionState.skipped.length ? collectionState.skipped.join(', ') : '(없음)'}\n` +
+      (collectionState.nextGap ? `- 다음에 들어보면 좋을 것: ${collectionState.nextGap}\n` : '') +
+      `- 이미 모은 걸 다시 캐묻지 말고, 처음이 아니면 "이어서" 자연스럽게 잇는다.\n` +
+      (collectionState.enough
+        ? `- 이미 일기를 제안한 상태다. 유저가 계속 이야기하면 매 턴 다시 제안하지 말고 대화를 잇는다(나그 금지).\n`
+        : '') +
+      `\n`
+    : '';
+
   return (
     `${def.persona}\n\n` +
     `[현재 시각] ${now.toLocaleString('ko-KR')}\n` +
     `- 이 시각 기준으로 하루가 아직 진행 중일 수 있다. "오늘 하루 어땠어"처럼 하루가 끝난 듯 회고를 강요하지 말고, "지금까지의 하루"를 묻는다.\n` +
     `- 아직 이르거나 낮 시간이면, 어느 정도 이야기한 뒤 "저녁/밤에 하루를 정리하며 다시 이야기하자"고 제안할 수 있다.\n\n` +
     weatherBlock +
+    stateBlock +
     `[이 형식(${def.label})에서 일기를 쓰려면 다음 정보를 모아야 한다]\n${checklist}\n\n` +
-    `[충분 판단] ${def.enoughSignal}\n` +
+    `[충분 판단] ${def.enoughSignal}\n\n` +
+    // 인사(greeting)는 updateCollectionState 툴 없이 generateText로 생성되므로,
+    // 이 지시를 주면 모델이 툴 대신 JSON을 본문에 써버린다 → 인사에선 제외한다.
+    (forGreeting
+      ? ''
+      : `[수집 상태 갱신 — 매 턴 필수]\n` +
+        `- 답변을 한 뒤(또는 전에), updateCollectionState 툴을 호출해 현재 수집 상태를 갱신하라.\n` +
+        `- filled = 위 체크리스트 중 유저가 말하거나 추측-확인으로 긍정/수정해 준 항목들(짧은 라벨로).\n` +
+        `- [매우 중요] "감정·생각/내면" 항목은 유저가 직접 표현했거나 네 추측을 확인해 준 경우에만 filled에 넣는다. AI 혼자 추측한 감상은 넣지 않는다.\n` +
+        `- skipped = 유저가 꺼리거나 자연스럽게 넘어간 항목. nextGap = 다음에 더 들어보면 좋을 빈 항목 1개.\n` +
+        `- enough = 위 [충분 판단] 기준을 충족했는지. 충족하면 자연스럽게 일기를 제안한다(이미 제안했으면 다시 권하지 않는다).\n` +
+        `- [편향일 뿐] 이 체크리스트는 질문을 강제하지 않는다. 자연스러움이 최우선이고, nextGap은 참고용이다. 빈칸을 채우려 심문하지 마라.\n\n`) +
     `[사진 제안 기준] ${def.photoSuggestGuidance}`
   );
+}
+
+/** DB의 collectionState(JSON 문자열)를 CollectionState로 파싱 (손상 시 null) */
+export function parseCollectionState(raw: string | null | undefined): CollectionState | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw);
+    return {
+      filled: Array.isArray(o.filled) ? o.filled : [],
+      skipped: Array.isArray(o.skipped) ? o.skipped : [],
+      enough: !!o.enough,
+      nextGap: typeof o.nextGap === 'string' ? o.nextGap : undefined,
+      updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function round6(n: number): number {
