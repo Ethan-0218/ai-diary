@@ -7,10 +7,12 @@ import {
   Req,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { promises as fs } from 'fs';
 import { basename, join } from 'path';
 import { v4 as uuid } from 'uuid';
@@ -33,6 +35,17 @@ import { LlmTracingService } from '../ai/llm-tracing.service';
 
 export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 
+type AuthedRequest = Request & { userId: string };
+
+/** 업로드된 파일 (multer) — 네임스페이스 타입(Express.Multer.File) 대신 평탄 타입으로 둬
+ *  데코레이터 메타데이터에 도달불가 typeof 가드가 생기지 않게 한다. */
+interface UploadedImage {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+}
+
+@UseGuards(JwtAuthGuard)
 @Controller('conversations')
 export class ConversationController {
   constructor(
@@ -42,57 +55,59 @@ export class ConversationController {
   ) {}
 
   @Post()
-  create(@Body() dto: CreateConversationDto) {
-    return this.conv.create(dto.format, dto.modelId, {
+  create(@Req() req: AuthedRequest, @Body() dto: CreateConversationDto) {
+    return this.conv.create(dto.format, dto.modelId, req.userId, {
       latitude: dto.latitude,
       longitude: dto.longitude,
     });
   }
 
   @Get()
-  list() {
-    return this.conv.list();
+  list(@Req() req: AuthedRequest) {
+    return this.conv.list(req.userId);
   }
 
   @Get(':id')
-  getOne(@Param('id') id: string) {
-    return this.conv.getDetail(id);
+  getOne(@Req() req: AuthedRequest, @Param('id') id: string) {
+    return this.conv.getDetail(id, req.userId);
   }
 
   @Get(':id/costs')
-  costs(@Param('id') id: string) {
-    return this.conv.getCosts(id);
+  costs(@Req() req: AuthedRequest, @Param('id') id: string) {
+    return this.conv.getCosts(id, req.userId);
   }
 
   @Post(':id/diary')
-  diary(@Param('id') id: string) {
-    return this.conv.generateDiary(id);
+  diary(@Req() req: AuthedRequest, @Param('id') id: string) {
+    return this.conv.generateDiary(id, req.userId);
   }
 
   @Post(':id/diary/revise')
   reviseDiary(
+    @Req() req: AuthedRequest,
     @Param('id') id: string,
     @Body() body: { instruction?: string },
   ) {
-    return this.conv.reviseDiary(id, (body?.instruction ?? '').trim());
+    return this.conv.reviseDiary(id, req.userId, (body?.instruction ?? '').trim());
   }
 
   @Post(':id/feedback')
   saveFeedback(
+    @Req() req: AuthedRequest,
     @Param('id') id: string,
     @Body() body: { content?: string },
   ) {
-    return this.conv.saveFeedback(id, body?.content ?? '');
+    return this.conv.saveFeedback(id, req.userId, body?.content ?? '');
   }
 
   /** 스트리밍 채팅 — useChat 트랜스포트 타깃 */
   @Post(':id/chat')
   async chat(
     @Param('id') id: string,
-    @Req() req: Request,
+    @Req() req: AuthedRequest,
     @Res() res: Response,
   ) {
-    const conv = await this.conv.requireConversation(id);
+    const conv = await this.conv.requireConversation(id, req.userId);
     const format = conv.format as DiaryFormat;
     const messages: UIMessage[] = (req.body?.messages ?? []) as UIMessage[];
 
@@ -191,10 +206,11 @@ export class ConversationController {
   @Post(':id/attachments')
   @UseInterceptors(FileInterceptor('file'))
   async upload(
+    @Req() req: AuthedRequest,
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: UploadedImage,
   ) {
-    await this.conv.requireConversation(id);
+    await this.conv.requireConversation(id, req.userId);
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
     let { buffer, mimetype } = file;
@@ -214,7 +230,7 @@ export class ConversationController {
 
     const filename = `${uuid()}.${ext}`;
     await fs.writeFile(join(UPLOAD_DIR, filename), buffer);
-    return this.conv.addAttachment(id, { filename, mimetype, buffer });
+    return this.conv.addAttachment(id, req.userId, { filename, mimetype, buffer });
   }
 }
 
@@ -234,6 +250,7 @@ export function stripLeakedToolJson(text: string | undefined): string {
   const looksLikeToolArg = (s: string): boolean => {
     try {
       const obj = JSON.parse(s);
+      /* istanbul ignore next -- 방어적: matchBrace가 항상 객체 리터럴 블록을 넘겨 도달 불가 */
       if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
       const keys = Object.keys(obj);
       return keys.length > 0 && keys.every((k) => TOOL_KEYS.has(k));
@@ -287,7 +304,7 @@ function matchBrace(text: string, start: number): number {
  * convertToModelMessages는 data-* 파트를 버리므로, 여기서 첨부 파일을 읽어 image 콘텐츠로 추가한다.
  * UI 유저 메시지와 모델 유저 메시지는 순서가 1:1로 대응하므로 순서대로 짝지어 주입한다.
  */
-async function injectAttachedPhotos(
+export async function injectAttachedPhotos(
   uiMessages: UIMessage[],
   modelMessages: Array<{ role: string; content: unknown }>,
 ): Promise<void> {
@@ -327,7 +344,7 @@ async function injectAttachedPhotos(
 }
 
 /** 스트림 에러를 사용자용 한국어 메시지로 변환 (무료 등급 quota 초과를 구체적으로 안내) */
-function chatErrorMessage(error: unknown): string {
+export function chatErrorMessage(error: unknown): string {
   const parts: string[] = [];
   const collect = (e: any, depth = 0) => {
     if (!e || depth > 3) return;
@@ -348,7 +365,7 @@ function chatErrorMessage(error: unknown): string {
 }
 
 /** HEIC/HEIF 여부 판별 (브라우저가 mimetype을 비워 보내는 경우 대비해 확장자도 확인) */
-function isHeic(mimetype: string | undefined, ext: string): boolean {
+export function isHeic(mimetype: string | undefined, ext: string): boolean {
   const mt = (mimetype ?? '').toLowerCase();
   return (
     mt.includes('heic') ||
@@ -359,7 +376,7 @@ function isHeic(mimetype: string | undefined, ext: string): boolean {
 }
 
 /** HEIC 버퍼를 JPEG 버퍼로 변환 (heic-convert: 순수 JS, 네이티브 의존성 없음) */
-async function heicToJpeg(input: Buffer): Promise<Buffer> {
+export async function heicToJpeg(input: Buffer): Promise<Buffer> {
   // CommonJS 모듈 — 동적 require로 로드
   const convert = require('heic-convert') as (opts: {
     buffer: Buffer;
@@ -371,7 +388,7 @@ async function heicToJpeg(input: Buffer): Promise<Buffer> {
 }
 
 /** UIMessage의 text part들을 이어붙임 */
-function uiText(m: UIMessage): string {
+export function uiText(m: UIMessage): string {
   const parts = (m.parts ?? []) as Array<{ type: string; text?: string }>;
   return parts
     .filter((p) => p.type === 'text' && p.text)

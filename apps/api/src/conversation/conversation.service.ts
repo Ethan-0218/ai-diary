@@ -15,7 +15,10 @@ import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 import { WeatherService } from '../ai/weather.service';
 
-const PUBLIC_BASE = process.env.PUBLIC_BASE ?? `http://localhost:${process.env.PORT ?? 9001}`;
+/** 업로드 파일 절대 URL 베이스 (env를 호출 시점에 읽는다) */
+function publicBase(): string {
+  return process.env.PUBLIC_BASE ?? `http://localhost:${process.env.PORT ?? 9001}`;
+}
 
 @Injectable()
 export class ConversationService {
@@ -26,10 +29,11 @@ export class ConversationService {
     private readonly weather: WeatherService,
   ) {}
 
-  /** 대화 생성 + AI 첫 인사 1턴 */
+  /** 대화 생성 + AI 첫 인사 1턴 (로그인 유저 소유) */
   async create(
     format: DiaryFormat,
     modelId: string,
+    userId: string,
     location?: { latitude?: number; longitude?: number },
   ): Promise<ConversationDetail> {
     const def = getFormatDef(format);
@@ -48,6 +52,7 @@ export class ConversationService {
     const conv = await this.prisma.conversation.create({
       data: {
         id: uuid(),
+        userId,
         title,
         format,
         modelId,
@@ -90,11 +95,12 @@ export class ConversationService {
       },
     });
 
-    return this.getDetail(conv.id);
+    return this.getDetail(conv.id, userId);
   }
 
-  async list(): Promise<ConversationSummary[]> {
+  async list(userId: string): Promise<ConversationSummary[]> {
     const convs = await this.prisma.conversation.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
         diary: { select: { id: true } },
@@ -112,7 +118,7 @@ export class ConversationService {
     }));
   }
 
-  async getDetail(id: string): Promise<ConversationDetail> {
+  async getDetail(id: string, userId: string): Promise<ConversationDetail> {
     const c = await this.prisma.conversation.findUnique({
       where: { id },
       include: {
@@ -122,7 +128,9 @@ export class ConversationService {
         feedback: true,
       },
     });
-    if (!c) throw new NotFoundException('conversation not found');
+    if (!c || c.userId !== userId) {
+      throw new NotFoundException('conversation not found');
+    }
     return {
       id: c.id,
       title: c.title,
@@ -140,7 +148,7 @@ export class ConversationService {
       })),
       attachments: c.attachments.map((a) => ({
         id: a.id,
-        url: `${PUBLIC_BASE}/uploads/${a.filePath}`,
+        url: `${publicBase()}/uploads/${a.filePath}`,
         caption: a.caption,
         mimeType: a.mimeType,
         createdAt: a.createdAt.toISOString(),
@@ -165,8 +173,8 @@ export class ConversationService {
   }
 
   /** 줄글 피드백 저장(upsert) — 빈 내용이면 삭제 */
-  async saveFeedback(conversationId: string, content: string) {
-    await this.requireConversation(conversationId);
+  async saveFeedback(conversationId: string, userId: string, content: string) {
+    await this.requireConversation(conversationId, userId);
     const trimmed = content.trim();
     if (!trimmed) {
       await this.prisma.feedback.deleteMany({ where: { conversationId } });
@@ -187,9 +195,12 @@ export class ConversationService {
     };
   }
 
-  async requireConversation(id: string) {
+  /** 대화를 로드하되, 소유자(userId)가 아니면 NotFound (존재 노출 방지). */
+  async requireConversation(id: string, userId: string) {
     const c = await this.prisma.conversation.findUnique({ where: { id } });
-    if (!c) throw new NotFoundException('conversation not found');
+    if (!c || c.userId !== userId) {
+      throw new NotFoundException('conversation not found');
+    }
     return c;
   }
 
@@ -229,8 +240,8 @@ export class ConversationService {
   }
 
   /** 일기 생성/수정에 공통으로 쓰는 컨텍스트(대화 transcript, 사진 설명, system 프롬프트) */
-  private async buildDiaryContext(id: string) {
-    const conv = await this.requireConversation(id);
+  private async buildDiaryContext(id: string, userId: string) {
+    const conv = await this.requireConversation(id, userId);
     const format = conv.format as DiaryFormat;
     const def = getFormatDef(format);
     const [messages, attachments] = await Promise.all([
@@ -261,13 +272,18 @@ export class ConversationService {
   }
 
   /** 생성된 일기를 DB에 저장하고 결과 형태로 반환 */
-  private async saveDiary(id: string, format: DiaryFormat, content: string) {
+  private async saveDiary(
+    id: string,
+    userId: string,
+    format: DiaryFormat,
+    content: string,
+  ) {
     const diary = await this.prisma.diary.upsert({
       where: { conversationId: id },
       create: { conversationId: id, format, content },
       update: { content, format },
     });
-    const costs = await this.getCosts(id);
+    const costs = await this.getCosts(id, userId);
     return {
       diary: {
         id: diary.id,
@@ -280,9 +296,9 @@ export class ConversationService {
   }
 
   /** 일기 생성 (버튼/AI 제안 양쪽에서 호출) */
-  async generateDiary(id: string) {
+  async generateDiary(id: string, userId: string) {
     const { conv, format, transcript, photoNotes, system } =
-      await this.buildDiaryContext(id);
+      await this.buildDiaryContext(id, userId);
     const prompt = `[대화 내용]\n${transcript}${photoNotes}`;
     const traceId = uuid();
 
@@ -297,19 +313,19 @@ export class ConversationService {
         }),
     );
 
-    return this.saveDiary(id, format, result.text);
+    return this.saveDiary(id, userId, format, result.text);
   }
 
   /** 작성된 일기를 유저의 수정 요청에 따라 다시 쓴다 (초안→수정 모드) */
-  async reviseDiary(id: string, instruction: string) {
+  async reviseDiary(id: string, userId: string, instruction: string) {
     const { conv, format, transcript, photoNotes, system } =
-      await this.buildDiaryContext(id);
+      await this.buildDiaryContext(id, userId);
     const existing = await this.prisma.diary.findUnique({
       where: { conversationId: id },
     });
     if (!existing) {
       // 아직 일기가 없으면 일반 생성으로 처리
-      return this.generateDiary(id);
+      return this.generateDiary(id, userId);
     }
 
     const reviseSystem =
@@ -334,11 +350,11 @@ export class ConversationService {
         }),
     );
 
-    return this.saveDiary(id, format, result.text);
+    return this.saveDiary(id, userId, format, result.text);
   }
 
-  async getCosts(id: string): Promise<CostSummary> {
-    await this.requireConversation(id);
+  async getCosts(id: string, userId: string): Promise<CostSummary> {
+    await this.requireConversation(id, userId);
     const usages = await this.prisma.llmUsage.findMany({
       where: { conversationId: id },
       orderBy: { createdAt: 'asc' },
@@ -392,9 +408,10 @@ export class ConversationService {
   /** 업로드된 이미지에 대해 비전 모델로 caption 생성 + 첨부 저장 */
   async addAttachment(
     conversationId: string,
+    userId: string,
     file: { filename: string; mimetype: string; buffer: Buffer },
   ) {
-    const conv = await this.requireConversation(conversationId);
+    const conv = await this.requireConversation(conversationId, userId);
     const visionModelId = process.env.VISION_MODEL_ID || conv.modelId;
     const traceId = uuid();
     const system =
@@ -438,7 +455,7 @@ export class ConversationService {
 
     return {
       id: attachment.id,
-      url: `${PUBLIC_BASE}/uploads/${attachment.filePath}`,
+      url: `${publicBase()}/uploads/${attachment.filePath}`,
       caption,
       mimeType: file.mimetype,
       createdAt: attachment.createdAt.toISOString(),
