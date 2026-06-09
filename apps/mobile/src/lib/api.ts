@@ -114,14 +114,14 @@ export const api = {
     }).then((r) => json<NotebookDetailDto>(r)),
 
   /**
-   * 구매 성공 후 일기장 발행. **S4.3 임시** — dev-grant(개발 전용)로 발행한다.
-   * S4.4에서 `/purchases/verify {purchaseToken}` 영수증 검증으로 교체한다.
+   * 구매 영수증(StoreKit JWS=purchaseToken)을 백엔드에서 검증 → 일기장 발행.
+   * 멱등(같은 트랜잭션 재호출은 이미 발행한 권 반환).
    */
-  grantPurchasedNotebook: (appStoreProductId: string) =>
-    authFetch(`${API_BASE}/notebooks/dev-grant`, {
+  verifyPurchase: (purchaseToken: string) =>
+    authFetch(`${API_BASE}/purchases/verify`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ appStoreProductId }),
+      body: JSON.stringify({ purchaseToken }),
     }).then((r) => json<NotebookDetailDto>(r)),
 
   getConversation: (id: string) =>

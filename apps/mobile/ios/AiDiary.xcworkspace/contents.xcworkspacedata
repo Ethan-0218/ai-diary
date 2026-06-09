@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:AiDiary.storekit">
+   </FileRef>
+   <FileRef
       location = "group:AiDiary.xcodeproj">
    </FileRef>
    <FileRef

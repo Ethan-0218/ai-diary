@@ -5,6 +5,7 @@ import { DatabaseModule } from './database/database.module';
 import { AiModule } from './ai/ai.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { NotebookModule } from './notebook/notebook.module';
+import { PurchaseModule } from './purchase/purchase.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { UPLOAD_DIR } from './conversation/conversation.controller';
@@ -21,6 +22,7 @@ import { UPLOAD_DIR } from './conversation/conversation.controller';
     UserModule,
     AuthModule,
     NotebookModule,
+    PurchaseModule,
     ConversationModule,
   ],
 })

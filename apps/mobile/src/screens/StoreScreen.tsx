@@ -57,8 +57,8 @@ export function StoreScreen({ navigation }: RootScreenProps<'Store'>) {
     setBuying(card.appStoreProductId);
     try {
       const purchase = await purchaseProduct(card.appStoreProductId);
-      // 결제 성공 → 백엔드 발행(임시 dev-grant, S4.4에서 영수증 검증으로 교체) → 트랜잭션 종료
-      await api.grantPurchasedNotebook(purchase.productId);
+      // 결제 성공 → 백엔드 영수증 검증·발행 → 트랜잭션 종료(검증 성공해야 finish)
+      await api.verifyPurchase(purchase.purchaseToken ?? '');
       await finishIapPurchase(purchase);
       Alert.alert('구매 완료', `'${card.title}' 일기장이 책장에 꽂혔어요.`, [
         { text: '확인', onPress: () => navigation.goBack() },
