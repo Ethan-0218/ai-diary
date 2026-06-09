@@ -12,7 +12,8 @@ export type LlmStep =
 export type LlmCallStatus = 'success' | 'failure';
 
 export interface CreateConversationDto {
-  format: DiaryFormat;
+  /** 어느 일기장(소유)에 오늘 칸을 쓸지. format은 노트북에서 파생된다. */
+  notebookId: string;
   modelId: string;
   /** 대화 시작 시 브라우저 위치 (날씨 조회용, 선택) */
   latitude?: number;

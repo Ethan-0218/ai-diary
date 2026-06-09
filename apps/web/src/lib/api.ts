@@ -5,6 +5,9 @@ import type {
   DiaryFormat,
   DiaryDto,
   FeedbackDto,
+  ProductDto,
+  NotebookDto,
+  NotebookDetailDto,
 } from '@ai-diary/shared';
 
 export const API_BASE =
@@ -52,15 +55,41 @@ export const api = {
     ),
 
   createConversation: (
-    format: DiaryFormat,
+    notebookId: string,
     modelId: string,
     coords?: { latitude: number; longitude: number },
   ) =>
     authFetch(`${API_BASE}/conversations`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format, modelId, ...coords }),
+      body: JSON.stringify({ notebookId, modelId, ...coords }),
     }).then((r) => json<ConversationDetail>(r)),
+
+  // ── 일기장(소유)·상품 (S4) ──
+  listProducts: () =>
+    fetch(`${API_BASE}/products`, { cache: 'no-store' }).then((r) =>
+      json<ProductDto[]>(r),
+    ),
+
+  listNotebooks: () =>
+    authFetch(`${API_BASE}/notebooks`, { cache: 'no-store' }).then((r) =>
+      json<NotebookDto[]>(r),
+    ),
+
+  mintStarter: (format: DiaryFormat) =>
+    authFetch(`${API_BASE}/notebooks/starter`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ format }),
+    }).then((r) => json<NotebookDetailDto>(r)),
+
+  /** 개발용 — IAP 검증 전 일기장 발행 언블락 */
+  devGrantNotebook: (appStoreProductId: string) =>
+    authFetch(`${API_BASE}/notebooks/dev-grant`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appStoreProductId }),
+    }).then((r) => json<NotebookDetailDto>(r)),
 
   getConversation: (id: string) =>
     authFetch(`${API_BASE}/conversations/${id}`, { cache: 'no-store' }).then(

@@ -30,7 +30,7 @@ TestFlight엔 두 종류:
 | ├ **S3.3 백엔드 개발** | Node/Nest API·인증(소셜/카카오)·DB(Postgres+pgvector)·파일/이미지·agent 연동 | API로 대화·일기·기억 CRUD 동작 |
 | ├ **S3.4 프론트엔드 개발** | RN 화면·내비게이션·대화 UI·일기 뷰·이미지·온보딩 | 앱에서 대화→일기까지 화면으로 흐름 |
 | └ **S3.5 연동 테스트·개선** | 프론트↔백↔agent end-to-end + 버그·품질 개선 | 실기기에서 핵심 플로우 통과 |
-| **S4. IAP 셋업** | ASC에 상품(구독/소비성) 생성 + 결제 SDK(❓ RevenueCat vs react-native-iap) + **구매·복원 UI** | 앱에 구매 버튼이 상품을 불러옴 |
+| **S4. IAP 셋업 (+ 일기장 소유 모델)** | 일기장 소유 모델 신설 + ASC 상품(Non-Consumable 일기장) + 결제 SDK(**react-native-iap 확정**) + **구매·복원 UI + 구매 후 사용**. 5개 하위 단계(S4.1~4.5) | 구매 → 백엔드 검증 → 일기장 발행 → 그 일기장으로 대화·일기 |
 | **S5. 서명·릴리스 빌드** | Bundle ID·인증서·프로비저닝(Xcode 자동 서명) + 버전/빌드번호 + Release archive | 아카이브 성공 |
 | **S6. 업로드·내부테스트** | ASC 업로드(Xcode/Transporter) + 수출규정(암호화) 답변 + 내부 테스터 설치 | 내 기기에 TestFlight 설치 |
 | **S7. 샌드박스 결제 테스트** | 샌드박스 테스터 계정 + TestFlight 빌드에서 구매·복원 흐름 통과(무과금) | 결제가 샌드박스로 완료됨 |
@@ -42,7 +42,8 @@ TestFlight엔 두 종류:
 - ✅ **S1**(앱등록·유료계약) · ✅ **S2**(로컬 개발환경) · ✅ **S3.1**(서비스 기획) · ✅ **S3.2**(AI agent 구현+검증)
 - ✅ **S3.3 백엔드 코어 완료**: Node/Nest API · 인증(소셜 검증·JWT·가드·dev-login) · DB(Postgres+pgvector, TypeORM) · 파일/이미지(업로드·vision·HEIC) · agent 연동 · **테스트 커버리지 100%**.
   - 남은 것: 기억 CRUD=**M3 연기**(pgvector 준비됨) · 실 OAuth client id=앱등록(외부) · prod 마이그레이션 전환.
-- ⬜ **다음 = S3.4 프론트(모바일 UI)** → S3.5 연동테스트 → S4~S8(IAP·릴리스·TestFlight).
+- ✅ **S3.4 프론트(모바일 코어 루프)** · ✅ **S3.5 하드닝** · ✅ **M3 기억** — main 머지(b75aefb, 2026-06-09).
+- ⬜ **다음 = S4 IAP + 일기장 소유 모델**(브랜치 `s4-iap-commerce`, react-native-iap 확정) → S5~S8(릴리스·TestFlight).
 
 ---
 
@@ -150,4 +151,14 @@ TestFlight엔 두 종류:
 - [x] **유닛테스트+tsc 통과**: errors/photo-picker 순수 로직 15개 추가(총 26 green). image-picker(untranspiled TS)는 jest.mock. simctl 빌드로 geolocation 네이티브 링크 컴파일 검증.
 - [ ] **실기기 E2E(남음)**: Honey's iPhone에 리빌드(`yarn ios --device`) 후 — 비행기모드 에러+재시도 / 카메라·보관함 사진 / 위치 권한 첫 허용→날씨 표시 / 권한 거부 시 무날씨 진행 확인.
 - S3.5 상세: _(위 — 코어 하드닝 코드+자동검증 완료, 실기기 E2E만 남음)_
+
+### S4 상세 — IAP + 일기장 소유 모델 (2026-06-09, 진행 중)
+> **확정 스키마**: `docs/s4-commerce-schema.md`(react-native-iap, 칸=별도 Slot 엔티티, 카탈로그=DB, 가격은 ASC). 브랜치 `s4-iap-commerce`. 5개 하위 단계.
+
+- [x] **S4.1 데이터 모델(백엔드)** ✅ — 엔티티 4종(`Product`·`Notebook`·`Slot`·`Purchase`) + `Conversation.slotId`. shared `products.ts` 카탈로그(4 SKU) → 부팅 시 DB 시드. 발행: `mintStarter`(기간형 3칸 멱등)·`mintFromProduct`(기간형=달력단위 남은칸·칸형=N칸). 대화 생성이 `notebookId`로 오늘 칸 해석→바인딩(멱등=하루 한 편), 일기 생성 시 칸 filled. 레거시 대화 백필. API `/products`·`/notebooks[/:id]`·`/notebooks/starter`·`/notebooks/dev-grant`(dev). web 하니스 책장/발행 UI로 전환. **api 테스트 170개·커버리지 100%** + tsc + 빌드 + **라이브 스모크**(발행→대화 칸 바인딩→멱등 검증).
+- [ ] **S4.2** 1차 SKU 확정 + ASC 상품 등록 + `.storekit` + **가격 전략**(월 중 비례 과금 IAP 제약 — 보류분 재논의).
+- [ ] **S4.3** react-native-iap 클라 + 스토어/책장 UI + 복원.
+- [ ] **S4.4** `Purchase` 영수증 검증(App Store Server API) + 발행/복원 + 멱등·환불 엣지 + 테스트.
+- [ ] **S4.5** 구매한 노트북으로 홈→대화→일기 E2E(샌드박스).
+- S4 상세: _(위 — S4.1 백엔드 데이터 모델 완료)_
 - …
