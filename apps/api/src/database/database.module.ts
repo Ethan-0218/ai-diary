@@ -17,6 +17,11 @@ import { ENTITIES } from '../entities';
         synchronize:
           config.get<string>('DB_SYNCHRONIZE') === 'true' ||
           config.get<string>('NODE_ENV') !== 'production',
+        // RDS(prod)는 SSL 필수. Amazon CA라 rejectUnauthorized=false로 수용. dev(로컬)는 SSL 끔.
+        ssl:
+          config.get<string>('NODE_ENV') === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
       }),
     }),
   ],
