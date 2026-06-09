@@ -28,15 +28,8 @@ const extractionSchema = z.object({
   mood: z.string().nullable().describe('그날의 무드 한 단어/구. 불명확하면 null.'),
 });
 
-/**
- * 추출 결과 타입 — z.infer 대신 명시 인터페이스로 둔다.
- * (generateObject의 zod 스키마 제네릭 깊은 추론이 tsc를 폭주시켜 OOM나는 것을 막는다.)
- */
-export interface ExtractionResult {
-  facts: { category: string; content: string; confidence: number }[];
-  summary: string;
-  mood: string | null;
-}
+/** 추출 결과 타입 — 스키마에서 추론(단일 출처). */
+export type ExtractionResult = z.infer<typeof extractionSchema>;
 
 /** recall 결과 한 건 */
 export interface RecalledMemory {
@@ -163,19 +156,11 @@ export class MemoryService implements OnModuleInit {
   ): Promise<ExtractionResult> {
     const traceId = uuid();
     const prompt = `다음은 오늘 유저와의 대화다. 여기서만 추출하라.\n\n${transcript}`;
-    // generateObject의 zod 스키마 제네릭은 추론 깊이가 폭발해 tsc를 OOM시킨다.
-    // 구체 시그니처로 캐스팅해 추론을 차단한다(런타임 zod 검증은 그대로 동작).
-    const genObject = generateObject as unknown as (opts: {
-      model: unknown;
-      schema: unknown;
-      system: string;
-      prompt: string;
-    }) => Promise<{ object: ExtractionResult }>;
     const result = await this.tracing.trace(
       { traceId, conversationId, step: 'memory_extraction', modelId },
       { system: EXTRACTION_SYSTEM, prompt },
       () =>
-        genObject({
+        generateObject({
           model: this.ai.resolveModel(modelId),
           schema: extractionSchema,
           system: EXTRACTION_SYSTEM,
