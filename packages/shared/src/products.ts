@@ -63,7 +63,8 @@ export interface NotebookProduct {
   active: boolean;
 }
 
-const APP = 'com.ai-diary';
+// Apple Product ID는 하이픈 불가(영숫자·마침표·밑줄만) → Bundle ID(com.ai-diary.app)와 달리 하이픈 뺀 접두사 사용.
+const APP = 'com.aidiary';
 
 /** 진열되는 한 "라인"(=카드). 월간(tiered)은 4 티어 SKU로 확장된다. */
 interface ProductLine {
