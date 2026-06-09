@@ -58,10 +58,13 @@ export class ConversationController {
 
   @Post()
   create(@Req() req: AuthedRequest, @Body() dto: CreateConversationDto) {
-    return this.conv.create(dto.notebookId, dto.modelId, req.userId, {
-      latitude: dto.latitude,
-      longitude: dto.longitude,
-    });
+    return this.conv.create(
+      dto.notebookId,
+      dto.modelId,
+      req.userId,
+      { latitude: dto.latitude, longitude: dto.longitude },
+      dto.timezone,
+    );
   }
 
   @Get()
@@ -127,6 +130,7 @@ export class ConversationController {
       parseCollectionState(conv.collectionState),
       false,
       memoryContext,
+      conv.timezone ?? undefined,
     );
     const traceId = uuid();
     const startedAt = Date.now();

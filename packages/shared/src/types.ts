@@ -18,6 +18,8 @@ export interface CreateConversationDto {
   /** 대화 시작 시 브라우저 위치 (날씨 조회용, 선택) */
   latitude?: number;
   longitude?: number;
+  /** 유저의 IANA 타임존(예: 'Asia/Seoul'). 인사 시각·오늘 칸 판정에 쓴다. 없으면 서버 기본값. */
+  timezone?: string;
 }
 
 export interface ConversationSummary {

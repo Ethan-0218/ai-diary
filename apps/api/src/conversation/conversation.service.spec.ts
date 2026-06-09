@@ -118,12 +118,12 @@ describe('ConversationService', () => {
   describe('create', () => {
     it('오늘 칸 해석→대화 생성(slotId·노트북 format) + 칸 바인딩 + 인사 저장 + 상세 반환', async () => {
       const detail = await service.create('nb1', 'm1', 'u1');
-      expect(notebook.claimTodaySlot).toHaveBeenCalledWith('nb1', 'u1');
+      expect(notebook.claimTodaySlot).toHaveBeenCalledWith('nb1', 'u1', expect.any(String));
       expect(weather.getWeatherNote).not.toHaveBeenCalled();
       expect(conversations.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'u1', slotId: 's1', format: 'plain', weatherNote: null }),
       );
-      expect(notebook.bindSlotConversation).toHaveBeenCalledWith('s1', 'c1');
+      expect(notebook.bindSlotConversation).toHaveBeenCalledWith('s1', 'c1', expect.any(String));
       expect(messages.save).toHaveBeenCalled();
       expect(detail.id).toBe('c1');
     });

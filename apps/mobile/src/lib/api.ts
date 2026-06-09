@@ -91,7 +91,13 @@ export const api = {
     authFetch(`${API_BASE}/conversations`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ notebookId, modelId, ...coords }),
+      body: JSON.stringify({
+        notebookId,
+        modelId,
+        ...coords,
+        // 유저 기기 타임존 — 인사 시각·오늘 칸 판정이 서버 UTC가 아니라 현지 기준이 되도록.
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
     }).then((r) => json<ConversationDetail>(r)),
 
   // ── 일기장(소유)·상품 (S4) ──

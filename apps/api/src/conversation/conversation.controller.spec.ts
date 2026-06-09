@@ -184,7 +184,7 @@ describe('ConversationController', () => {
 
   it('thin delegators가 userId와 함께 위임', async () => {
     expect(await controller.create(req, { notebookId: 'nb1', modelId: 'm', latitude: 1, longitude: 2 } as any)).toBe('created');
-    expect(conv.create).toHaveBeenCalledWith('nb1', 'm', 'u1', { latitude: 1, longitude: 2 });
+    expect(conv.create).toHaveBeenCalledWith('nb1', 'm', 'u1', { latitude: 1, longitude: 2 }, undefined);
     expect(await controller.list(req)).toBe('listed');
     expect(conv.list).toHaveBeenCalledWith('u1');
     expect(await controller.getOne(req, 'c1')).toBe('detail');

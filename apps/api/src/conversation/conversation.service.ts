@@ -24,7 +24,11 @@ import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 import { WeatherService } from '../ai/weather.service';
 import { MemoryService } from '../memory/memory.service';
-import { NotebookService } from '../notebook/notebook.service';
+import {
+  NotebookService,
+  todaySlotDate,
+  DEFAULT_TZ,
+} from '../notebook/notebook.service';
 
 /**
  * 업로드 파일 경로(상대). 호스트는 붙이지 않는다 — 클라이언트가 자신의 API_BASE로 절대화한다.
@@ -64,10 +68,13 @@ export class ConversationService {
     modelId: string,
     userId: string,
     location?: { latitude?: number; longitude?: number },
+    timezone?: string,
   ): Promise<ConversationDetail> {
+    const tz = timezone ?? DEFAULT_TZ;
     const { notebook, slot } = await this.notebook.claimTodaySlot(
       notebookId,
       userId,
+      tz,
     );
     if (slot.conversationId) {
       return this.getDetail(slot.conversationId, userId);
@@ -75,7 +82,7 @@ export class ConversationService {
     const format = notebook.format as DiaryFormat;
     const def = getFormatDef(format);
     const now = new Date();
-    const title = `${formatDate(now)} ${def.label}`;
+    const title = `${todaySlotDate(now, tz)} ${def.label}`;
 
     // 현재 위치가 주어지면 실시간 날씨를 조회해 대화 컨텍스트로 저장 (실패 시 null)
     let weatherNote: string | null = null;
@@ -96,20 +103,25 @@ export class ConversationService {
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
         weatherNote,
+        timezone: tz,
       }),
     );
-    await this.notebook.bindSlotConversation(slot.id, conv.id);
+    await this.notebook.bindSlotConversation(slot.id, conv.id, tz);
 
     const traceId = uuid();
     const memoryContext = await this.memory.buildContext(userId);
-    const system = buildChatSystem(format, now, weatherNote, null, true, memoryContext);
-    const nowTime = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    const system = buildChatSystem(format, now, weatherNote, null, true, memoryContext, tz);
+    const nowTime = now.toLocaleTimeString('ko-KR', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+    });
     const weatherLine = weatherNote
       ? `현재 날씨는 "${weatherNote}"이다. 인사에 날씨를 자연스럽게 한마디 곁들여도 좋다. ` +
         `단, 주어진 이 정보 외에 날씨를 지어내지 마라. `
       : `날씨 정보는 주어지지 않았으니 날씨를 아는 척 언급하지 마라. `;
     const greetingPrompt =
-      `유저가 막 대화를 시작했다. 지금은 ${formatDate(now)} ${nowTime}이다. ` +
+      `유저가 막 대화를 시작했다. 지금은 ${todaySlotDate(now, tz)} ${nowTime}이다. ` +
       weatherLine +
       `먼저 따뜻하게 인사하고, 이 시각을 자연스럽게 의식하며 첫 질문을 건네라. ` +
       `하루가 아직 진행 중일 수 있으니 "오늘 하루 어땠어"처럼 회고를 강요하지 말고, ` +
@@ -294,7 +306,7 @@ export class ConversationService {
 
     const now = new Date();
     const system =
-      `${def.diaryPrompt}\n\n오늘 날짜: ${formatDate(now)}\n\n` +
+      `${def.diaryPrompt}\n\n오늘 날짜: ${todaySlotDate(now, conv.timezone ?? DEFAULT_TZ)}\n\n` +
       `[시간 순서] 대화에서 사건이 일어난 순서가 분명하지 않으면, 임의의 시간 순서로 단정해 서술하지 마라. ` +
       `유저가 명시한 순서만 시간순으로 쓰고, 불확실하면 "A도 하고 B도 했다"처럼 순서를 단정짓지 말고 자연스럽게 엮는다. ` +
       `(이 원칙은 문체/표현의 윤색과 무관하게, 사실관계인 사건의 전후 순서에만 적용된다.)\n\n` +
@@ -524,13 +536,6 @@ function byCreatedAtAsc(a: { createdAt: Date }, b: { createdAt: Date }): number 
   return a.createdAt.getTime() - b.createdAt.getTime();
 }
 
-function formatDate(d: Date): string {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 export function buildChatSystem(
   format: DiaryFormat,
   now: Date,
@@ -538,6 +543,7 @@ export function buildChatSystem(
   collectionState?: CollectionState | null,
   forGreeting = false,
   memoryContext?: string | null,
+  timeZone: string = DEFAULT_TZ,
 ): string {
   const def = getFormatDef(format);
   const checklist = def.requiredInfo.map((x) => `- ${x}`).join('\n');
@@ -569,7 +575,7 @@ export function buildChatSystem(
 
   return (
     `${def.persona}\n\n` +
-    `[현재 시각] ${now.toLocaleString('ko-KR')}\n` +
+    `[현재 시각] ${now.toLocaleString('ko-KR', { timeZone })}\n` +
     `- 이 시각 기준으로 하루가 아직 진행 중일 수 있다. "오늘 하루 어땠어"처럼 하루가 끝난 듯 회고를 강요하지 말고, "지금까지의 하루"를 묻는다.\n` +
     `- 아직 이르거나 낮 시간이면, 어느 정도 이야기한 뒤 "저녁/밤에 하루를 정리하며 다시 이야기하자"고 제안할 수 있다.\n\n` +
     memoryBlock +

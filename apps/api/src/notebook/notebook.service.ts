@@ -289,9 +289,10 @@ export class NotebookService implements OnModuleInit {
   async claimTodaySlot(
     notebookId: string,
     userId: string,
+    timeZone: string = DEFAULT_TZ,
   ): Promise<{ notebook: Notebook; slot: Slot }> {
     const notebook = await this.requireNotebook(notebookId, userId);
-    const today = todaySlotDate();
+    const today = todaySlotDate(new Date(), timeZone);
     if (notebook.periodType === 'period') {
       const slot = await this.slots.findOne({
         where: { notebookId, slotDate: today },
@@ -316,14 +317,18 @@ export class NotebookService implements OnModuleInit {
   }
 
   /** 대화를 칸에 연결하고 drafting으로 전환(칸형은 오늘 날짜 기록). */
-  async bindSlotConversation(slotId: string, conversationId: string): Promise<void> {
+  async bindSlotConversation(
+    slotId: string,
+    conversationId: string,
+    timeZone: string = DEFAULT_TZ,
+  ): Promise<void> {
     const slot = await this.slots.findOneOrFail({ where: { id: slotId } });
     await this.slots.update(
       { id: slotId },
       {
         conversationId,
         status: 'drafting',
-        slotDate: slot.slotDate ?? todaySlotDate(),
+        slotDate: slot.slotDate ?? todaySlotDate(new Date(), timeZone),
       },
     );
   }
@@ -362,11 +367,45 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** 현지시간 기준 "오늘". 새벽 5시 이전은 전날로 친다(기획 §6 새벽5시 컷). */
-export function todaySlotDate(now: Date = new Date()): string {
-  const d = new Date(now.getTime());
-  if (d.getHours() < 5) d.setDate(d.getDate() - 1);
-  return localDateStr(d);
+/** 타임존 미지정 시 기본값(한국 우선). 클라가 IANA 타임존을 보내면 그걸 쓴다. */
+export const DEFAULT_TZ = 'Asia/Seoul';
+
+/** 특정 IANA 타임존 기준 벽시계 시각 구성요소. (서버 OS 타임존과 무관) */
+export function zonedParts(
+  now: Date,
+  timeZone: string,
+): { y: number; m: number; d: number; hour: number; minute: number } {
+  const map = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+      .formatToParts(now)
+      .filter((p) => p.type !== 'literal')
+      .map((p) => [p.type, p.value]),
+  );
+  return {
+    y: Number(map.year),
+    m: Number(map.month),
+    d: Number(map.day),
+    hour: Number(map.hour) % 24, // 일부 환경의 '24'(자정) → 0
+    minute: Number(map.minute),
+  };
+}
+
+/** 유저 타임존 기준 "오늘". 새벽 5시 이전은 전날로 친다(기획 §6 새벽5시 컷). */
+export function todaySlotDate(
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_TZ,
+): string {
+  const z = zonedParts(now, timeZone);
+  const dateStr = `${z.y}-${pad(z.m)}-${pad(z.d)}`;
+  return z.hour < 5 ? addDays(dateStr, -1) : dateStr;
 }
 
 export function addDays(dateStr: string, n: number): string {

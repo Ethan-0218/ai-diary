@@ -3,6 +3,7 @@ import { tierForRemainingDays, tierLabel } from '@ai-diary/shared';
 import {
   NotebookService,
   todaySlotDate,
+  zonedParts,
   addDays,
   inclusiveDays,
   parsePeriodSpec,
@@ -12,10 +13,18 @@ import {
 } from './notebook.service';
 
 describe('notebook 순수 헬퍼', () => {
-  it('todaySlotDate: 새벽5시 이전은 전날(현지)', () => {
-    expect(todaySlotDate(new Date(2026, 5, 9, 7, 0))).toBe('2026-06-09');
-    expect(todaySlotDate(new Date(2026, 5, 9, 4, 59))).toBe('2026-06-08');
-    expect(todaySlotDate(new Date(2026, 5, 9, 5, 0))).toBe('2026-06-09');
+  it('zonedParts: IANA 타임존 벽시계 구성요소', () => {
+    const t = new Date('2026-06-09T20:00:00Z');
+    expect(zonedParts(t, 'Asia/Seoul')).toEqual({ y: 2026, m: 6, d: 10, hour: 5, minute: 0 });
+    expect(zonedParts(t, 'America/New_York')).toEqual({ y: 2026, m: 6, d: 9, hour: 16, minute: 0 });
+  });
+
+  it('todaySlotDate: 유저 타임존 기준 + 새벽5시 컷 (결정적)', () => {
+    const t = new Date('2026-06-09T20:00:00Z'); // 같은 순간
+    expect(todaySlotDate(t, 'America/New_York')).toBe('2026-06-09'); // EDT 16:00
+    expect(todaySlotDate(t, 'Asia/Seoul')).toBe('2026-06-10'); // KST 익일 05:00(컷 경계=당일)
+    // KST 02:00(새벽5시 이전) → 전날
+    expect(todaySlotDate(new Date('2026-06-08T17:00:00Z'), 'Asia/Seoul')).toBe('2026-06-08');
   });
 
   it('addDays: 월/연 경계 넘김', () => {

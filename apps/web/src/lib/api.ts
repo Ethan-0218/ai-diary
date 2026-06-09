@@ -62,7 +62,12 @@ export const api = {
     authFetch(`${API_BASE}/conversations`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ notebookId, modelId, ...coords }),
+      body: JSON.stringify({
+        notebookId,
+        modelId,
+        ...coords,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
     }).then((r) => json<ConversationDetail>(r)),
 
   // ── 일기장(소유)·상품 (S4) ──

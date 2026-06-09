@@ -45,6 +45,10 @@ export class Conversation {
   @Column()
   modelId!: string;
 
+  /** 유저 IANA 타임존(인사 시각·오늘 칸·일기 날짜 판정). 생성 시 고정. */
+  @Column({ type: 'varchar', nullable: true })
+  timezone!: string | null;
+
   @Column({ type: 'double precision', nullable: true })
   latitude!: number | null;
 
