@@ -14,3 +14,6 @@ gem 'bigdecimal'
 gem 'logger'
 gem 'benchmark'
 gem 'mutex_m'
+
+# 빌드·TestFlight 업로드 자동화 (S6)
+gem 'fastlane'

@@ -1,0 +1,3 @@
+app_identifier("com.ai-diary.app")
+# Apple ID / 팀은 App Store Connect API 키(Fastfile)로 추론된다.
+# 코드 서명 팀은 Xcode 프로젝트의 DEVELOPMENT_TEAM(G8L529X29G)을 사용.

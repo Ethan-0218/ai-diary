@@ -53,6 +53,10 @@ yarn-error.log
 **/fastlane/screenshots
 **/fastlane/test_output
 
+# 비밀 — 절대 커밋 금지 (App Store Connect API 키 / 환경변수)
+**/fastlane/.env
+**/*.p8
+
 # Bundle artifact
 *.jsbundle
 
