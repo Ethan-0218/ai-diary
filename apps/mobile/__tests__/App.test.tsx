@@ -100,6 +100,17 @@ describe('toUserMessage', () => {
   it('일반 Error는 메시지를 그대로 노출', () => {
     expect(toUserMessage(new Error('직접 메시지'))).toBe('직접 메시지');
   });
+  it('400은 서버 본문(JSON message)을 그대로 안내', () => {
+    expect(
+      toUserMessage(
+        new ApiError(400, JSON.stringify({ message: '오늘은 이 일기장에 쓸 수 있는 칸이 없어요.' })),
+      ),
+    ).toBe('오늘은 이 일기장에 쓸 수 있는 칸이 없어요.');
+    // message 배열도 처리
+    expect(toUserMessage(new ApiError(400, JSON.stringify({ message: ['첫 오류'] })))).toBe('첫 오류');
+    // 본문이 JSON이 아니거나 message 없으면 기본 안내
+    expect(toUserMessage(new ApiError(400, 'plain text'))).toMatch(/처리하지 못했어요/);
+  });
 });
 
 describe('isNetworkError', () => {

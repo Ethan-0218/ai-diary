@@ -5,6 +5,9 @@ import type {
   DiaryFormat,
   DiaryDto,
   FeedbackDto,
+  ProductDto,
+  NotebookDto,
+  NotebookDetailDto,
 } from '@ai-diary/shared';
 import { API_BASE } from './config';
 import { ApiError, notifyUnauthorized } from './errors';
@@ -81,15 +84,45 @@ export const api = {
     ),
 
   createConversation: (
-    format: DiaryFormat,
+    notebookId: string,
     modelId: string,
     coords?: { latitude: number; longitude: number },
   ) =>
     authFetch(`${API_BASE}/conversations`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format, modelId, ...coords }),
+      body: JSON.stringify({ notebookId, modelId, ...coords }),
     }).then((r) => json<ConversationDetail>(r)),
+
+  // ── 일기장(소유)·상품 (S4) ──
+  listProducts: () =>
+    fetch(`${API_BASE}/products`).then((r) => json<ProductDto[]>(r)),
+
+  listNotebooks: () =>
+    authFetch(`${API_BASE}/notebooks`).then((r) => json<NotebookDto[]>(r)),
+
+  getNotebook: (id: string) =>
+    authFetch(`${API_BASE}/notebooks/${id}`).then((r) =>
+      json<NotebookDetailDto>(r),
+    ),
+
+  mintStarter: (format: DiaryFormat) =>
+    authFetch(`${API_BASE}/notebooks/starter`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ format }),
+    }).then((r) => json<NotebookDetailDto>(r)),
+
+  /**
+   * 구매 성공 후 일기장 발행. **S4.3 임시** — dev-grant(개발 전용)로 발행한다.
+   * S4.4에서 `/purchases/verify {purchaseToken}` 영수증 검증으로 교체한다.
+   */
+  grantPurchasedNotebook: (appStoreProductId: string) =>
+    authFetch(`${API_BASE}/notebooks/dev-grant`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appStoreProductId }),
+    }).then((r) => json<NotebookDetailDto>(r)),
 
   getConversation: (id: string) =>
     authFetch(`${API_BASE}/conversations/${id}`).then((r) =>
