@@ -35,8 +35,12 @@ export class Conversation {
   @Column()
   title!: string;
 
+  /** 소속 칸(Slot). 마이그레이션 위해 nullable. */
+  @Column({ type: 'uuid', nullable: true })
+  slotId!: string | null;
+
   @Column()
-  format!: string; // 'plain' | 'newspaper' | 'novel'
+  format!: string; // 'plain' | 'newspaper' | 'novel' — notebook.format에서 복사
 
   @Column()
   modelId!: string;

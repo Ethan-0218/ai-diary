@@ -73,7 +73,7 @@ describe('buildChatSystem', () => {
 describe('ConversationService', () => {
   let service: ConversationService;
   let conversations: any, messages: any, attachments: any, diaries: any, feedbacks: any, llmUsages: any;
-  let ai: any, tracing: any, weather: any, memory: any;
+  let ai: any, tracing: any, weather: any, memory: any, notebook: any;
 
   const convRow = (over: any = {}) => ({
     id: 'c1', userId: 'u1', title: '2026-06-08 일반 일기', format: 'plain', modelId: 'm1',
@@ -102,24 +102,46 @@ describe('ConversationService', () => {
       buildContext: jest.fn().mockResolvedValue(null),
       onDiaryComplete: jest.fn().mockResolvedValue(undefined),
     };
+    notebook = {
+      claimTodaySlot: jest.fn().mockResolvedValue({
+        notebook: { id: 'nb1', format: 'plain' },
+        slot: { id: 's1', conversationId: null },
+      }),
+      bindSlotConversation: jest.fn().mockResolvedValue(undefined),
+      markSlotFilledByConversation: jest.fn().mockResolvedValue(undefined),
+    };
     mockGen.mockReset();
     mockGen.mockResolvedValue({ text: '생성된 텍스트' });
-    service = new ConversationService(conversations, messages, attachments, diaries, feedbacks, llmUsages, ai, tracing, weather, memory);
+    service = new ConversationService(conversations, messages, attachments, diaries, feedbacks, llmUsages, ai, tracing, weather, memory, notebook);
   });
 
   describe('create', () => {
-    it('위치 없으면 날씨 조회 안 함 + 인사 저장 + 상세 반환', async () => {
-      const detail = await service.create('plain', 'm1', 'u1');
+    it('오늘 칸 해석→대화 생성(slotId·노트북 format) + 칸 바인딩 + 인사 저장 + 상세 반환', async () => {
+      const detail = await service.create('nb1', 'm1', 'u1');
+      expect(notebook.claimTodaySlot).toHaveBeenCalledWith('nb1', 'u1');
       expect(weather.getWeatherNote).not.toHaveBeenCalled();
-      expect(conversations.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', weatherNote: null }));
-      expect(conversations.save).toHaveBeenCalled();
+      expect(conversations.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'u1', slotId: 's1', format: 'plain', weatherNote: null }),
+      );
+      expect(notebook.bindSlotConversation).toHaveBeenCalledWith('s1', 'c1');
       expect(messages.save).toHaveBeenCalled();
+      expect(detail.id).toBe('c1');
+    });
+
+    it('이미 오늘 대화가 있으면 새로 만들지 않고 그 대화 반환(멱등, 하루 한 편)', async () => {
+      notebook.claimTodaySlot.mockResolvedValue({
+        notebook: { id: 'nb1', format: 'plain' },
+        slot: { id: 's1', conversationId: 'c1' },
+      });
+      const detail = await service.create('nb1', 'm1', 'u1');
+      expect(conversations.save).not.toHaveBeenCalled();
+      expect(notebook.bindSlotConversation).not.toHaveBeenCalled();
       expect(detail.id).toBe('c1');
     });
 
     it('위치 있으면 날씨 조회', async () => {
       weather.getWeatherNote.mockResolvedValue('맑음, 26°C (낮)');
-      await service.create('plain', 'm1', 'u1', { latitude: 37, longitude: 127 });
+      await service.create('nb1', 'm1', 'u1', { latitude: 37, longitude: 127 });
       expect(weather.getWeatherNote).toHaveBeenCalledWith(37, 127);
       expect(conversations.create).toHaveBeenCalledWith(expect.objectContaining({ weatherNote: '맑음, 26°C (낮)' }));
     });
@@ -241,6 +263,8 @@ describe('ConversationService', () => {
       expect(call.system).toContain('[과거 맥락 — 연속성 참고용]');
       expect(diaries.upsert).toHaveBeenCalled();
       expect(r.diary.content).toBe('일기');
+      // 칸을 filled로 전환
+      expect(notebook.markSlotFilledByConversation).toHaveBeenCalledWith('c1');
       // 후처리 추출 호출
       expect(memory.onDiaryComplete).toHaveBeenCalledWith(
         expect.objectContaining({ conversationId: 'c1', userId: 'u1', diaryId: 'd1' }),

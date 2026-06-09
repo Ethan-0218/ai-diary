@@ -32,6 +32,19 @@ function quotaMessage(text: string): string | null {
   return null;
 }
 
+/** NestException 본문(JSON {message})에서 사용자용 메시지를 뽑는다. 배열/문자열 모두 처리. */
+function parseServerMessage(body: string): string | null {
+  try {
+    const o = JSON.parse(body);
+    const m = o?.message;
+    if (typeof m === 'string' && m.trim()) return m.trim();
+    if (Array.isArray(m) && typeof m[0] === 'string') return m[0];
+  } catch {
+    /* 본문이 JSON이 아니면 무시 */
+  }
+  return null;
+}
+
 /**
  * 임의의 throw 값을 사용자에게 보여줄 한국어 한 줄로.
  * - 네트워크: 연결 안내
@@ -49,7 +62,9 @@ export function toUserMessage(e: unknown): string {
     if (e.status === 413) return '파일이 너무 커요. 더 작은 사진을 골라주세요.';
     if (e.status === 404) return '대상을 찾을 수 없어요.';
     if (e.status >= 500) return '서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해주세요.';
-    return '요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.';
+    // 400/403/409 등 — 백엔드가 보낸 한국어 메시지가 있으면 그걸 그대로 안내(예: "오늘 쓸 칸 없음").
+    const serverMsg = parseServerMessage(e.body);
+    return serverMsg || '요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.';
   }
   const msg = (e as Error)?.message?.trim();
   return msg || '문제가 발생했어요. 잠시 후 다시 시도해주세요.';

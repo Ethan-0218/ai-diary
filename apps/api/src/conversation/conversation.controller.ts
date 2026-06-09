@@ -58,7 +58,7 @@ export class ConversationController {
 
   @Post()
   create(@Req() req: AuthedRequest, @Body() dto: CreateConversationDto) {
-    return this.conv.create(dto.format, dto.modelId, req.userId, {
+    return this.conv.create(dto.notebookId, dto.modelId, req.userId, {
       latitude: dto.latitude,
       longitude: dto.longitude,
     });

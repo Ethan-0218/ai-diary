@@ -1,0 +1,76 @@
+{
+  "identifier" : "AID-STOREKIT-0001",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "7900",
+      "familyShareable" : false,
+      "internalID" : "AID0000000000001",
+      "localizations" : [
+        {
+          "description" : "한 달을 차곡차곡 채우는 보통의 일기장. 달력처럼 하루에 한 칸.",
+          "displayName" : "이달의 일기 (한 달)",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.aidiary.notebook.plain_month_w4",
+      "referenceName" : "이달의 일기 (한 달)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "7900",
+      "familyShareable" : false,
+      "internalID" : "AID0000000000002",
+      "localizations" : [
+        {
+          "description" : "하루하루를 한 편의 짧은 소설로 엮는 한 달치 일기장.",
+          "displayName" : "이달의 소설 (한 달)",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.aidiary.notebook.novel_month_w4",
+      "referenceName" : "이달의 소설 (한 달)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "7900",
+      "familyShareable" : false,
+      "internalID" : "AID0000000000003",
+      "localizations" : [
+        {
+          "description" : "하루를 객관적 기사로 정리하는 한 달치 신문 일기장.",
+          "displayName" : "이달의 신문 (한 달)",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.aidiary.notebook.newspaper_month_w4",
+      "referenceName" : "이달의 신문 (한 달)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9900",
+      "familyShareable" : false,
+      "internalID" : "AID0000000000004",
+      "localizations" : [
+        {
+          "description" : "날짜에 매이지 않고 30칸을 채우는 테마 일기장.",
+          "displayName" : "30일의 기록",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.aidiary.notebook.plain_30",
+      "referenceName" : "30일의 기록",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

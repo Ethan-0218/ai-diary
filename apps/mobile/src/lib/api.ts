@@ -5,6 +5,9 @@ import type {
   DiaryFormat,
   DiaryDto,
   FeedbackDto,
+  ProductDto,
+  NotebookDto,
+  NotebookDetailDto,
 } from '@ai-diary/shared';
 import { API_BASE } from './config';
 import { ApiError, notifyUnauthorized } from './errors';
@@ -81,15 +84,45 @@ export const api = {
     ),
 
   createConversation: (
-    format: DiaryFormat,
+    notebookId: string,
     modelId: string,
     coords?: { latitude: number; longitude: number },
   ) =>
     authFetch(`${API_BASE}/conversations`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ format, modelId, ...coords }),
+      body: JSON.stringify({ notebookId, modelId, ...coords }),
     }).then((r) => json<ConversationDetail>(r)),
+
+  // ── 일기장(소유)·상품 (S4) ──
+  listProducts: () =>
+    fetch(`${API_BASE}/products`).then((r) => json<ProductDto[]>(r)),
+
+  listNotebooks: () =>
+    authFetch(`${API_BASE}/notebooks`).then((r) => json<NotebookDto[]>(r)),
+
+  getNotebook: (id: string) =>
+    authFetch(`${API_BASE}/notebooks/${id}`).then((r) =>
+      json<NotebookDetailDto>(r),
+    ),
+
+  mintStarter: (format: DiaryFormat) =>
+    authFetch(`${API_BASE}/notebooks/starter`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ format }),
+    }).then((r) => json<NotebookDetailDto>(r)),
+
+  /**
+   * 구매 영수증(StoreKit JWS=purchaseToken)을 백엔드에서 검증 → 일기장 발행.
+   * 멱등(같은 트랜잭션 재호출은 이미 발행한 권 반환).
+   */
+  verifyPurchase: (purchaseToken: string) =>
+    authFetch(`${API_BASE}/purchases/verify`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ purchaseToken }),
+    }).then((r) => json<NotebookDetailDto>(r)),
 
   getConversation: (id: string) =>
     authFetch(`${API_BASE}/conversations/${id}`).then((r) =>

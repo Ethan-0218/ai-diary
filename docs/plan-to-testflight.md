@@ -30,7 +30,7 @@ TestFlight엔 두 종류:
 | ├ **S3.3 백엔드 개발** | Node/Nest API·인증(소셜/카카오)·DB(Postgres+pgvector)·파일/이미지·agent 연동 | API로 대화·일기·기억 CRUD 동작 |
 | ├ **S3.4 프론트엔드 개발** | RN 화면·내비게이션·대화 UI·일기 뷰·이미지·온보딩 | 앱에서 대화→일기까지 화면으로 흐름 |
 | └ **S3.5 연동 테스트·개선** | 프론트↔백↔agent end-to-end + 버그·품질 개선 | 실기기에서 핵심 플로우 통과 |
-| **S4. IAP 셋업** | ASC에 상품(구독/소비성) 생성 + 결제 SDK(❓ RevenueCat vs react-native-iap) + **구매·복원 UI** | 앱에 구매 버튼이 상품을 불러옴 |
+| **S4. IAP 셋업 (+ 일기장 소유 모델)** | 일기장 소유 모델 신설 + ASC 상품(**Consumable** — 매달 재구매 위해, 소유는 백엔드 계정 추적) + 결제 SDK(**react-native-iap 확정**) + **구매·복원 UI + 구매 후 사용**. 5개 하위 단계(S4.1~4.5) | 구매 → 백엔드 검증 → 일기장 발행 → 그 일기장으로 대화·일기 |
 | **S5. 서명·릴리스 빌드** | Bundle ID·인증서·프로비저닝(Xcode 자동 서명) + 버전/빌드번호 + Release archive | 아카이브 성공 |
 | **S6. 업로드·내부테스트** | ASC 업로드(Xcode/Transporter) + 수출규정(암호화) 답변 + 내부 테스터 설치 | 내 기기에 TestFlight 설치 |
 | **S7. 샌드박스 결제 테스트** | 샌드박스 테스터 계정 + TestFlight 빌드에서 구매·복원 흐름 통과(무과금) | 결제가 샌드박스로 완료됨 |
@@ -42,7 +42,8 @@ TestFlight엔 두 종류:
 - ✅ **S1**(앱등록·유료계약) · ✅ **S2**(로컬 개발환경) · ✅ **S3.1**(서비스 기획) · ✅ **S3.2**(AI agent 구현+검증)
 - ✅ **S3.3 백엔드 코어 완료**: Node/Nest API · 인증(소셜 검증·JWT·가드·dev-login) · DB(Postgres+pgvector, TypeORM) · 파일/이미지(업로드·vision·HEIC) · agent 연동 · **테스트 커버리지 100%**.
   - 남은 것: 기억 CRUD=**M3 연기**(pgvector 준비됨) · 실 OAuth client id=앱등록(외부) · prod 마이그레이션 전환.
-- ⬜ **다음 = S3.4 프론트(모바일 UI)** → S3.5 연동테스트 → S4~S8(IAP·릴리스·TestFlight).
+- ✅ **S3.4 프론트(모바일 코어 루프)** · ✅ **S3.5 하드닝** · ✅ **M3 기억** — main 머지(b75aefb, 2026-06-09).
+- ⬜ **다음 = S4 IAP + 일기장 소유 모델**(브랜치 `s4-iap-commerce`, react-native-iap 확정) → S5~S8(릴리스·TestFlight).
 
 ---
 
@@ -150,4 +151,16 @@ TestFlight엔 두 종류:
 - [x] **유닛테스트+tsc 통과**: errors/photo-picker 순수 로직 15개 추가(총 26 green). image-picker(untranspiled TS)는 jest.mock. simctl 빌드로 geolocation 네이티브 링크 컴파일 검증.
 - [ ] **실기기 E2E(남음)**: Honey's iPhone에 리빌드(`yarn ios --device`) 후 — 비행기모드 에러+재시도 / 카메라·보관함 사진 / 위치 권한 첫 허용→날씨 표시 / 권한 거부 시 무날씨 진행 확인.
 - S3.5 상세: _(위 — 코어 하드닝 코드+자동검증 완료, 실기기 E2E만 남음)_
+
+### S4 상세 — IAP + 일기장 소유 모델 (2026-06-09, 진행 중)
+> **확정 스키마**: `docs/s4-commerce-schema.md`(react-native-iap, 칸=별도 Slot 엔티티, 카탈로그=DB, 가격은 ASC). 브랜치 `s4-iap-commerce`. 5개 하위 단계.
+
+- [x] **S4.1 데이터 모델(백엔드)** ✅ — 엔티티 4종(`Product`·`Notebook`·`Slot`·`Purchase`) + `Conversation.slotId`. shared `products.ts` 카탈로그(4 SKU) → 부팅 시 DB 시드. 발행: `mintStarter`(기간형 3칸 멱등)·`mintFromProduct`(기간형=달력단위 남은칸·칸형=N칸). 대화 생성이 `notebookId`로 오늘 칸 해석→바인딩(멱등=하루 한 편), 일기 생성 시 칸 filled. 레거시 대화 백필. API `/products`·`/notebooks[/:id]`·`/notebooks/starter`·`/notebooks/dev-grant`(dev). web 하니스 책장/발행 UI로 전환. **api 테스트 170개·커버리지 100%** + tsc + 빌드 + **라이브 스모크**(발행→대화 칸 바인딩→멱등 검증).
+- [ ] **S4.2** 1차 SKU 확정 + ASC 상품 등록 + `.storekit` + **가격 전략**(월 중 비례 과금 IAP 제약 — 보류분 재논의).
+- [x] **S4.3 모바일 IAP + 스토어·책장** ✅ — react-native-iap 15(nitro)+nitro-modules(오토링크, `pod install --repo-update`로 openiap 통합, RN 0.84.1 네이티브 빌드 통과). `ios/AiDiary.storekit`(4 SKU Consumable·KRW). `lib/iap.ts`(init·fetchProducts·requestPurchase·listener·finishTransaction). StoreScreen(`/products`+StoreKit 가격→구매→발행). Home→책장(노트북→오늘 칸·빈책장=스타터/스토어). 구매 후 발행=**dev-grant 임시**(S4.4 영수증검증으로 교체). 복원=계정 로그인(Consumable이라 StoreKit restore 아님). tsc+jest 27+빌드 검증. **실기기/시뮬 구매 E2E는 수동**(.storekit 스킴 선택 + 백엔드 dev).
+- **S4.3 라이브 E2E 통과** ✅(2026-06-09, Honey's iPhone) — `.storekit` 스킴 설정 + Xcode Run으로 실기기에서 **스토어(₩7,900)→StoreKit 결제 시트→백엔드 발행(dev-grant)→책장 사용**까지 라운드트립 확인. 카탈로그를 ASC 실제 등록 4개(plain/novel/newspaper 월간 W4 + plain_30)와 일치(신문 on, novel_30 off).
+- [x] **S4.4 영수증 검증** ✅ — `@apple/app-store-server-library`로 StoreKit2 서명 트랜잭션(purchaseToken=JWS) 검증. `ReceiptVerifierService`(환경 분기: Sandbox/Production=Apple 루트 G3·G2 체인 / Xcode 로컬=서명 스킵·**비프로덕션 한정**). `PurchaseService.verifyAndMint`(검증→Purchase 저장·transactionId 멱등→발행, 다른 계정=Forbidden). `POST /purchases/verify`. 모바일은 dev-grant→verifyPurchase. api 테스트 198·100%·라이브 스모크(Xcode JWS→발행→멱등). 환불(App Store Server Notifications V2 웹훅)=후속.
+- [x] **S4.5 샌드박스 E2E** ✅(2026-06-09, Honey's iPhone) — 실기기에서 **실제 App Store 샌드박스 구매**(이달의 신문, environment=Sandbox) → 백엔드가 **Apple 루트 체인으로 진짜 영수증 검증 통과**(Xcode 스킵 아님!) → Purchase(Sandbox) 기록 + "이달의 신문" 발행(source=purchase, 6월 22칸) + 책장 사용. DB 검증 완료. ※ ASC 상품 Missing Metadata여도 샌드박스 조회·구매 동작.
+- **✅ S4(IAP + 일기장 소유 모델) 완료** — 데이터모델·상품·결제·검증·사용 전부. 다음 = S5(서명·릴리스)~S8(TestFlight·검수).
+- S4 상세: _(위 — S4.1 백엔드 데이터 모델 완료)_
 - …

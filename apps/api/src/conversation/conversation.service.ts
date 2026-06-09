@@ -24,6 +24,7 @@ import { AiService } from '../ai/ai.service';
 import { LlmTracingService } from '../ai/llm-tracing.service';
 import { WeatherService } from '../ai/weather.service';
 import { MemoryService } from '../memory/memory.service';
+import { NotebookService } from '../notebook/notebook.service';
 
 /**
  * 업로드 파일 경로(상대). 호스트는 붙이지 않는다 — 클라이언트가 자신의 API_BASE로 절대화한다.
@@ -51,15 +52,27 @@ export class ConversationService {
     private readonly tracing: LlmTracingService,
     private readonly weather: WeatherService,
     private readonly memory: MemoryService,
+    private readonly notebook: NotebookService,
   ) {}
 
-  /** 대화 생성 + AI 첫 인사 1턴 (로그인 유저 소유) */
+  /**
+   * 대화 생성 + AI 첫 인사 1턴 (로그인 유저 소유).
+   * 일기장의 오늘 칸을 해석해 거기에 묶는다. 이미 오늘 대화가 있으면 그걸 반환(멱등, 하루 한 편).
+   */
   async create(
-    format: DiaryFormat,
+    notebookId: string,
     modelId: string,
     userId: string,
     location?: { latitude?: number; longitude?: number },
   ): Promise<ConversationDetail> {
+    const { notebook, slot } = await this.notebook.claimTodaySlot(
+      notebookId,
+      userId,
+    );
+    if (slot.conversationId) {
+      return this.getDetail(slot.conversationId, userId);
+    }
+    const format = notebook.format as DiaryFormat;
     const def = getFormatDef(format);
     const now = new Date();
     const title = `${formatDate(now)} ${def.label}`;
@@ -76,6 +89,7 @@ export class ConversationService {
     const conv = await this.conversations.save(
       this.conversations.create({
         userId,
+        slotId: slot.id,
         title,
         format,
         modelId,
@@ -84,6 +98,7 @@ export class ConversationService {
         weatherNote,
       }),
     );
+    await this.notebook.bindSlotConversation(slot.id, conv.id);
 
     const traceId = uuid();
     const memoryContext = await this.memory.buildContext(userId);
@@ -339,6 +354,9 @@ export class ConversationService {
     );
 
     const saved = await this.saveDiary(id, userId, format, result.text);
+
+    // 일기가 생성되면 해당 칸을 filled로 전환(적응형 홈 상태3).
+    await this.notebook.markSlotFilledByConversation(id);
 
     // 후처리: 대화에서 기억 추출·저장 (best-effort, 내부에서 throw 흡수).
     await this.memory.onDiaryComplete({
