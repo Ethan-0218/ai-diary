@@ -162,6 +162,7 @@ TestFlight엔 두 종류:
 - [x] **S4.4 영수증 검증** ✅ — `@apple/app-store-server-library`로 StoreKit2 서명 트랜잭션(purchaseToken=JWS) 검증. `ReceiptVerifierService`(환경 분기: Sandbox/Production=Apple 루트 G3·G2 체인 / Xcode 로컬=서명 스킵·**비프로덕션 한정**). `PurchaseService.verifyAndMint`(검증→Purchase 저장·transactionId 멱등→발행, 다른 계정=Forbidden). `POST /purchases/verify`. 모바일은 dev-grant→verifyPurchase. api 테스트 198·100%·라이브 스모크(Xcode JWS→발행→멱등). 환불(App Store Server Notifications V2 웹훅)=후속.
 - [x] **S4.5 샌드박스 E2E** ✅(2026-06-09, Honey's iPhone) — 실기기에서 **실제 App Store 샌드박스 구매**(이달의 신문, environment=Sandbox) → 백엔드가 **Apple 루트 체인으로 진짜 영수증 검증 통과**(Xcode 스킵 아님!) → Purchase(Sandbox) 기록 + "이달의 신문" 발행(source=purchase, 6월 22칸) + 책장 사용. DB 검증 완료. ※ ASC 상품 Missing Metadata여도 샌드박스 조회·구매 동작.
 - **✅ S4(IAP + 일기장 소유 모델) 완료** — 데이터모델·상품·결제·검증·사용 전부. 다음 = S5(서명·릴리스)~S8(TestFlight·검수).
+- **✅ S7 샌드박스 결제 통과**(2026-06-09) — TestFlight 빌드(build 2)에서 **실제 샌드박스 구매** → **배포된 프로덕션 백엔드**가 Apple 루트로 영수증 검증(env=Sandbox) → "이달의 일기"(22칸) 발행 + 책장 사용. DB 확인(purchase↔notebook 1:1, 중복 없음). 샌드박스 재시도 팝업은 정상 UX. → **남은 건 S8 외부 검수.**
 - S4 상세: _(위 — S4.1 백엔드 데이터 모델 완료)_
 
 ### S5 상세 — 서명·릴리스 빌드 (2026-06-09)
