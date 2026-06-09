@@ -84,9 +84,11 @@ interface ProductLine {
   voiceEnabled: boolean;
   section: StoreSection;
   sortOrder: number;
+  /** 진열 여부. 기본 true. false면 시드는 되되 /products·발행에서 제외(나중에 켜기). */
+  active?: boolean;
 }
 
-/** S4.2 1차 라인. 월간 3종(각 4 티어) + 칸형 2종 = 14 SKU. */
+/** S4.2 1차 라인. 월간 plain/novel(각 4 티어) + 칸형 2종. (한달의 신문은 1차 제외) */
 const PRODUCT_LINES: ProductLine[] = [
   {
     lineId: 'plain-month',
@@ -121,6 +123,8 @@ const PRODUCT_LINES: ProductLine[] = [
     sortOrder: 20,
   },
   {
+    // 1차 제외(유저 결정 2026-06-09): 한달의 신문 미출시. 재출시 시 active 줄 삭제.
+    active: false,
     lineId: 'newspaper-month',
     baseProductId: `${APP}.notebook.newspaper_month`,
     tiered: true,
@@ -182,7 +186,7 @@ function lineToProducts(line: ProductLine): NotebookProduct[] {
     voiceEnabled: line.voiceEnabled,
     section: line.section,
     sortOrder: line.sortOrder,
-    active: true,
+    active: line.active ?? true,
   };
   if (!line.tiered) {
     return [{ ...common, appStoreProductId: line.baseProductId, weeksTier: null }];
