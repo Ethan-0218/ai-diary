@@ -163,4 +163,12 @@ TestFlight엔 두 종류:
 - [x] **S4.5 샌드박스 E2E** ✅(2026-06-09, Honey's iPhone) — 실기기에서 **실제 App Store 샌드박스 구매**(이달의 신문, environment=Sandbox) → 백엔드가 **Apple 루트 체인으로 진짜 영수증 검증 통과**(Xcode 스킵 아님!) → Purchase(Sandbox) 기록 + "이달의 신문" 발행(source=purchase, 6월 22칸) + 책장 사용. DB 검증 완료. ※ ASC 상품 Missing Metadata여도 샌드박스 조회·구매 동작.
 - **✅ S4(IAP + 일기장 소유 모델) 완료** — 데이터모델·상품·결제·검증·사용 전부. 다음 = S5(서명·릴리스)~S8(TestFlight·검수).
 - S4 상세: _(위 — S4.1 백엔드 데이터 모델 완료)_
+
+### S5 상세 — 서명·릴리스 빌드 (2026-06-09)
+- [x] **Release 아카이브 성공** ✅ — `xcodebuild ... -configuration Release -allowProvisioningUpdates archive`. Bundle ID `com.ai-diary.app` · Team `G8L529X29G` · 버전 **1.0 / 빌드 1**. 자동 프로비저닝(서명=Apple Development, 배포 서명은 S6 export에서). 아카이브 `/tmp/AiDiary.xcarchive`(95M, dSYM 포함). RN 0.84+nitro/iap 네이티브 전부 Release 컴파일+JS 번들 통과.
+- S5 끝 기준("아카이브 성공") 충족.
+
+### S6 상세 — 업로드·내부테스트 (다음, JIT)
+- [ ] 아카이브 → **App Store용 export(배포 서명)** → ASC 업로드 → 처리 → TestFlight 내부 설치.
+- 필요: **업로드 인증**(App Store Connect API 키 또는 앱암호) · 배포 인증서(export 시 -allowProvisioningUpdates 자동) · 수출규정(암호화) 답변(`ITSAppUsesNonExemptEncryption=false`로 회피).
 - …
