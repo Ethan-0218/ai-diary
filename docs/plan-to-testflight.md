@@ -168,7 +168,10 @@ TestFlight엔 두 종류:
 - [x] **Release 아카이브 성공** ✅ — `xcodebuild ... -configuration Release -allowProvisioningUpdates archive`. Bundle ID `com.ai-diary.app` · Team `G8L529X29G` · 버전 **1.0 / 빌드 1**. 자동 프로비저닝(서명=Apple Development, 배포 서명은 S6 export에서). 아카이브 `/tmp/AiDiary.xcarchive`(95M, dSYM 포함). RN 0.84+nitro/iap 네이티브 전부 Release 컴파일+JS 번들 통과.
 - S5 끝 기준("아카이브 성공") 충족.
 
-### S6 상세 — 업로드·내부테스트 (다음, JIT)
-- [ ] 아카이브 → **App Store용 export(배포 서명)** → ASC 업로드 → 처리 → TestFlight 내부 설치.
-- 필요: **업로드 인증**(App Store Connect API 키 또는 앱암호) · 배포 인증서(export 시 -allowProvisioningUpdates 자동) · 수출규정(암호화) 답변(`ITSAppUsesNonExemptEncryption=false`로 회피).
+### S6 상세 — 업로드·내부테스트 (2026-06-09)
+- [x] **fastlane 자동화 + 업로드 성공** ✅ — `ios/fastlane`(Appfile·Fastfile, `beta` 레인: build_app Release app-store export + upload_to_testflight). 인증=**ASC API 키**(env, `ios/fastlane/.env`·`.p8` 커밋금지). `bundle exec fastlane beta`로 빌드+배포서명(자동 프로비저닝, Distribution 인증서 자동생성)+업로드 성공(App 6775742546, **빌드 1**).
+- [x] **앱 아이콘** ✅ — 빈 아이콘셋이라 1차 검수 거부(120/152 누락·CFBundleIconName 없음) → 1024 단일사이즈 플레이스홀더 아이콘 추가(파랑→보라+일기장 페이지). 디자인 교체는 후속.
+- [x] **수출규정** ✅ — `ITSAppUsesNonExemptEncryption=false`로 프롬프트 회피.
+- [ ] **TestFlight 처리 대기 + 내부 설치(유저)** — 처리(~5~30분) 후 ASC→TestFlight에 빌드 표시 → 폰 TestFlight 앱에서 설치 → S6 끝 기준("내 기기에 TestFlight 설치") 충족.
+- 재업로드 시: `bundle exec fastlane bump`(빌드번호 +1) 후 `fastlane beta`.
 - …
