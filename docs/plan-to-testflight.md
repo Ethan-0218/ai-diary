@@ -173,6 +173,6 @@ TestFlight엔 두 종류:
 - [x] **앱 아이콘** ✅ — 빈 아이콘셋이라 1차 검수 거부(120/152 누락·CFBundleIconName 없음) → 1024 단일사이즈 플레이스홀더 아이콘 추가(파랑→보라+일기장 페이지). 디자인 교체는 후속.
 - [x] **수출규정** ✅ — `ITSAppUsesNonExemptEncryption=false`로 프롬프트 회피.
 - [x] **TestFlight 내부 설치 완료** ✅(2026-06-09) — 빌드 1 처리 완료 → 내부 테스트 그룹 생성+빌드/테스터 추가 → Honey's iPhone TestFlight 설치. **S6 끝 기준("내 기기에 TestFlight 설치") 충족.**
-  - ⚠️ **백엔드 미배포 이슈**: Release/TestFlight 빌드는 `API_BASE=PROD_API_BASE`(`https://api.ai-diary.app`)인데 그 서버가 **아직 없음** → 설치는 됐으나 로그인/상품 등 실동작은 백엔드 배포 후. **S7(샌드박스결제)·S8(외부검수) 전 백엔드 배포 필요.**
+  - [x] **백엔드 배포 완료** ✅(2026-06-09) — 기존 EC2(54.180.93.123, samshintalk 공유 인프라)에 PM2 배포. 공유 RDS에 `aidiary` DB+pgvector. `https://aidiary-api.samshintalk.com`(nginx+certbot HTTPS). 모바일 `PROD_API_BASE` 교체 + **build 2** TF 업로드. 함정 해결: ESM→Node22 실행, RDS SSL. 상세=`docs/deploy` + 메모리.
 - 재업로드 시: `bundle exec fastlane bump`(빌드번호 +1) 후 `fastlane beta`.
 - …
