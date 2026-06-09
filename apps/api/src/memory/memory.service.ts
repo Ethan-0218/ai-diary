@@ -70,6 +70,14 @@ export class MemoryService implements OnModuleInit {
     await this.ensureSchema();
   }
 
+  /**
+   * recall 의미검색 거리 임계값(코사인 거리, 0=동일). 이보다 멀면 "관련 없음"으로 보고 회수하지 않는다.
+   * text-embedding-3-small 기준 관련≈0.3~0.45 / 무관≈0.75~0.85라 0.55가 둘을 가른다. env로 조정 가능.
+   */
+  private get recallMaxDistance(): number {
+    return Number(process.env.RECALL_MAX_DISTANCE) || 0.55;
+  }
+
   /** pgvector 확장 + 임베딩 테이블(멱등). TypeORM synchronize가 건드리지 않는 raw 테이블. */
   async ensureSchema(): Promise<void> {
     try {
@@ -111,10 +119,15 @@ export class MemoryService implements OnModuleInit {
     diaryContent: string;
   }): Promise<void> {
     try {
+      // 이미 아는 사실을 추출 프롬프트에 줘서 같은 사실이 미세한 표현차로 중복 적재되는 것을 막는다.
+      const known = await this.facts.find({
+        where: { userId: args.userId, supersededAt: IsNull() },
+      });
       const extracted = await this.extract(
         args.modelId,
         args.transcript,
         args.conversationId,
+        known.map((f) => `${f.category}: ${f.content}`),
       );
 
       for (const f of extracted.facts) {
@@ -153,9 +166,14 @@ export class MemoryService implements OnModuleInit {
     modelId: string,
     transcript: string,
     conversationId: string,
+    knownFacts: string[] = [],
   ): Promise<ExtractionResult> {
     const traceId = uuid();
-    const prompt = `다음은 오늘 유저와의 대화다. 여기서만 추출하라.\n\n${transcript}`;
+    const knownBlock = knownFacts.length
+      ? `\n\n[이미 알고 있는 사실 — 아래에 *없는* 새 사실만 facts에 넣어라]\n` +
+        knownFacts.map((f) => `- ${f}`).join('\n')
+      : '';
+    const prompt = `다음은 오늘 유저와의 대화다. 여기서만 추출하라.\n\n${transcript}${knownBlock}`;
     const result = await this.tracing.trace(
       { traceId, conversationId, step: 'memory_extraction', modelId },
       { system: EXTRACTION_SYSTEM, prompt },
@@ -251,14 +269,16 @@ export class MemoryService implements OnModuleInit {
         query,
         conversationId ? { conversationId } : undefined,
       );
+      // 거리 임계값(< MAX) — 의미상 충분히 가까운 것만 회수. 없으면 빈 배열을 반환해
+      // AI가 "기억에 없다"고 솔직히 답하게 한다(무관한 최근접을 아는 척 끌어쓰지 않게).
       const rows: Array<{ ownerType: string; ownerId: string }> =
         await this.dataSource.query(
           `SELECT "ownerType","ownerId"
              FROM memory_embedding
-            WHERE "userId" = $2
+            WHERE "userId" = $2 AND (embedding <=> $1::vector) < $4
             ORDER BY embedding <=> $1::vector
             LIMIT $3`,
-          [toVectorLiteral(qVec), userId, k],
+          [toVectorLiteral(qVec), userId, k, this.recallMaxDistance],
         );
       const out: RecalledMemory[] = [];
       for (const r of rows) {

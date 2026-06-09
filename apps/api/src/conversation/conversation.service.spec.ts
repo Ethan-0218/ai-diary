@@ -64,6 +64,10 @@ describe('buildChatSystem', () => {
     expect(s).toContain('[기억 — 이 유저에 대해 이전 대화에서 알게 된 것]');
     expect(s).toContain('- (직업) 개발자');
   });
+
+  it('기억 정직성 가드는 항상 포함(아는 척 방지)', () => {
+    expect(buildChatSystem('plain', now, null, null)).toContain('[기억 정직성');
+  });
 });
 
 describe('ConversationService', () => {

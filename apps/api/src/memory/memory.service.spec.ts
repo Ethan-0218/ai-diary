@@ -55,6 +55,16 @@ describe('MemoryService', () => {
       expect(tracing.trace).toHaveBeenCalled();
       expect(ai.resolveModel).toHaveBeenCalledWith('m1');
     });
+
+    it('knownFacts 주면 프롬프트에 "이미 알고 있는 사실" 블록 주입(중복 방지)', async () => {
+      (generateObject as jest.Mock).mockResolvedValue({
+        object: { facts: [], summary: '', mood: null }, usage: {},
+      });
+      await service.extract('m1', '대화', 'c1', ['직업: 개발자']);
+      const prompt = (generateObject as jest.Mock).mock.calls[0][0].prompt;
+      expect(prompt).toContain('이미 알고 있는 사실');
+      expect(prompt).toContain('- 직업: 개발자');
+    });
   });
 
   describe('upsertFact', () => {
@@ -79,11 +89,13 @@ describe('MemoryService', () => {
     };
 
     it('추출→프로필 저장→에피소드(신규)→임베딩 2건', async () => {
+      facts.find.mockResolvedValue([{ category: '직업', content: '개발자' }]); // 기존 사실→추출 프롬프트 주입
       (generateObject as jest.Mock).mockResolvedValue({
         object: { facts: [{ category: '관심사', content: '러닝', confidence: 0.8 }], summary: '오늘 달림', mood: '상쾌' },
         usage: {},
       });
       await service.onDiaryComplete(args);
+      expect((generateObject as jest.Mock).mock.calls[0][0].prompt).toContain('- 직업: 개발자');
       expect(facts.save).toHaveBeenCalled();
       expect(episodes.save).toHaveBeenCalledWith(
         expect.objectContaining({ conversationId: 'c1', summary: '오늘 달림', mood: '상쾌' }),
@@ -170,6 +182,15 @@ describe('MemoryService', () => {
     it('실패 시 빈 배열', async () => {
       embeddings.embed.mockRejectedValue(new Error('boom'));
       expect(await service.recall('u1', 'q')).toEqual([]);
+    });
+
+    it('RECALL_MAX_DISTANCE 환경변수로 임계값 조정', async () => {
+      process.env.RECALL_MAX_DISTANCE = '0.4';
+      dataSource.query.mockResolvedValue([]);
+      await service.recall('u1', 'q');
+      const call = dataSource.query.mock.calls.find((c: any[]) => /ORDER BY embedding/.test(c[0]));
+      expect(call[1][3]).toBe(0.4); // 검색 쿼리의 거리 임계값 파라미터($4)
+      delete process.env.RECALL_MAX_DISTANCE;
     });
   });
 });
