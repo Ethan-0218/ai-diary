@@ -54,7 +54,7 @@ describe('ReceiptVerifierService', () => {
   let config: any;
   let service: ReceiptVerifierService;
 
-  const makeConfig = (over: Record<string, string | undefined> = {}) => ({
+  const makeConfig = (over: Record<string, string | undefined> = {}): any => ({
     get: jest.fn(
       (k: string) =>
         ({
