@@ -37,6 +37,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>오늘의 순간을 찍어 일기에 담기 위해 카메라를 사용합니다</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>날씨를 일기에 적기 위해 위치를 사용합니다</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>날씨를 일기에 적기 위해 위치를 사용합니다</string>
 	<key>NSPhotoLibraryUsageDescription</key>
