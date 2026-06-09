@@ -3,8 +3,8 @@ import { NativeModules, Platform } from 'react-native';
 /** 백엔드 포트(규칙: api = 9001) */
 const API_PORT = 9001;
 
-/** 릴리스(프로덕션) API — 추후 실제 도메인으로 교체 */
-const PROD_API_BASE = 'https://api.ai-diary.app';
+/** 릴리스(프로덕션) API — EC2(samshintalk 인프라). 정식 도메인은 추후 교체. */
+const PROD_API_BASE = 'https://aidiary-api.samshintalk.com';
 
 /**
  * 개발 중 Metro가 JS 번들을 내려준 호스트를 그대로 추출한다.
