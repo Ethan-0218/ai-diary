@@ -158,7 +158,7 @@ TestFlight엔 두 종류:
 - [x] **S4.1 데이터 모델(백엔드)** ✅ — 엔티티 4종(`Product`·`Notebook`·`Slot`·`Purchase`) + `Conversation.slotId`. shared `products.ts` 카탈로그(4 SKU) → 부팅 시 DB 시드. 발행: `mintStarter`(기간형 3칸 멱등)·`mintFromProduct`(기간형=달력단위 남은칸·칸형=N칸). 대화 생성이 `notebookId`로 오늘 칸 해석→바인딩(멱등=하루 한 편), 일기 생성 시 칸 filled. 레거시 대화 백필. API `/products`·`/notebooks[/:id]`·`/notebooks/starter`·`/notebooks/dev-grant`(dev). web 하니스 책장/발행 UI로 전환. **api 테스트 170개·커버리지 100%** + tsc + 빌드 + **라이브 스모크**(발행→대화 칸 바인딩→멱등 검증).
 - [ ] **S4.2** 1차 SKU 확정 + ASC 상품 등록 + `.storekit` + **가격 전략**(월 중 비례 과금 IAP 제약 — 보류분 재논의).
 - [x] **S4.3 모바일 IAP + 스토어·책장** ✅ — react-native-iap 15(nitro)+nitro-modules(오토링크, `pod install --repo-update`로 openiap 통합, RN 0.84.1 네이티브 빌드 통과). `ios/AiDiary.storekit`(4 SKU Consumable·KRW). `lib/iap.ts`(init·fetchProducts·requestPurchase·listener·finishTransaction). StoreScreen(`/products`+StoreKit 가격→구매→발행). Home→책장(노트북→오늘 칸·빈책장=스타터/스토어). 구매 후 발행=**dev-grant 임시**(S4.4 영수증검증으로 교체). 복원=계정 로그인(Consumable이라 StoreKit restore 아님). tsc+jest 27+빌드 검증. **실기기/시뮬 구매 E2E는 수동**(.storekit 스킴 선택 + 백엔드 dev).
-- 남은 **유저 수동(S4.3 라이브)**: Xcode에서 `AiDiary.storekit`을 프로젝트에 추가 → Edit Scheme→Run→Options→StoreKit Configuration 선택 → 앱 실행(백엔드 dev 켜고) → 책장→스토어→구매 시트 확인.
+- **S4.3 라이브 E2E 통과** ✅(2026-06-09, Honey's iPhone) — `.storekit` 스킴 설정 + Xcode Run으로 실기기에서 **스토어(₩7,900)→StoreKit 결제 시트→백엔드 발행(dev-grant)→책장 사용**까지 라운드트립 확인. 카탈로그를 ASC 실제 등록 4개(plain/novel/newspaper 월간 W4 + plain_30)와 일치(신문 on, novel_30 off).
 - [ ] **S4.4** `Purchase` 영수증 검증(App Store Server API) + 발행/복원 + 멱등·환불 엣지 + 테스트.
 - [ ] **S4.5** 구매한 노트북으로 홈→대화→일기 E2E(샌드박스).
 - S4 상세: _(위 — S4.1 백엔드 데이터 모델 완료)_
