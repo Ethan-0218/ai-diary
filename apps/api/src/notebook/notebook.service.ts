@@ -10,6 +10,8 @@ import {
   PRODUCT_CATALOG,
   STARTER_SLOT_COUNT,
   isStarterFormat,
+  tierForRemainingDays,
+  tierLabel,
   type NotebookDetailDto,
   type NotebookDto,
   type NotebookSource,
@@ -17,6 +19,7 @@ import {
   type ProductDto,
   type SlotDto,
   type StarterFormat,
+  type WeeksTier,
 } from '@ai-diary/shared';
 import { Conversation, Diary, Notebook, Product, Slot } from '../entities';
 
@@ -49,6 +52,8 @@ export class NotebookService implements OnModuleInit {
       await this.products.upsert(
         {
           appStoreProductId: p.appStoreProductId,
+          lineId: p.lineId,
+          weeksTier: p.weeksTier,
           kind: p.kind,
           title: p.title,
           description: p.description,
@@ -121,13 +126,35 @@ export class NotebookService implements OnModuleInit {
     }
   }
 
-  /** 진열 중(active) 상품 목록 — 스토어/책장이 StoreKit 가격과 합쳐 렌더한다. */
-  async getProducts(): Promise<ProductDto[]> {
-    const rows = await this.products.find({
-      where: { active: true },
-      order: { sortOrder: 'ASC' },
-    });
-    return rows.map(toProductDto);
+  /**
+   * 진열 카드 목록 — lineId로 묶어 라인당 1장.
+   * 월간 라인은 오늘(현지) 기준 그 달 남은 주에 맞는 티어 SKU+라벨을 골라 반환한다
+   * (클라는 티어 계산 없이 그 SKU만 StoreKit 가격 조회·구매).
+   */
+  async getProducts(today: string = todaySlotDate()): Promise<ProductDto[]> {
+    const rows = await this.products.find({ where: { active: true } });
+    const remaining = inclusiveDays(today, periodRange('month', today).end);
+    const tier = tierForRemainingDays(remaining);
+
+    const byLine = new Map<string, Product[]>();
+    for (const r of rows) {
+      const list = byLine.get(r.lineId) ?? [];
+      list.push(r);
+      byLine.set(r.lineId, list);
+    }
+
+    const cards: ProductDto[] = [];
+    for (const group of byLine.values()) {
+      const tiered = group.some((g) => g.weeksTier != null);
+      const chosen = tiered
+        ? group.find((g) => g.weeksTier === tier) ?? group[0]
+        : group[0];
+      const label =
+        chosen.weeksTier != null ? tierLabel(chosen.weeksTier as WeeksTier) : null;
+      cards.push(toProductDto(chosen, label));
+    }
+    cards.sort((a, b) => a.sortOrder - b.sortOrder);
+    return cards;
   }
 
   /** 무료 스타터 발행(기획 §4.5-C: 기간형 3칸, 일반/소설 택1). 유저당 1권 멱등. */
@@ -349,6 +376,15 @@ export function addDays(dateStr: string, n: number): string {
   return localDateStr(d);
 }
 
+/** from~to(둘 다 포함) 일수. (UTC로 계산해 DST 영향 회피) */
+export function inclusiveDays(from: string, to: string): number {
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  const a = Date.UTC(fy, fm - 1, fd);
+  const b = Date.UTC(ty, tm - 1, td);
+  return Math.round((b - a) / 86400000) + 1;
+}
+
 export function serializePeriodSpec(spec: PeriodSpec): string {
   return typeof spec === 'string' ? spec : JSON.stringify(spec);
 }
@@ -398,8 +434,9 @@ export function enumeratePeriodSlots(
   return specs;
 }
 
-function toProductDto(p: Product): ProductDto {
+function toProductDto(p: Product, tierLabelText: string | null): ProductDto {
   return {
+    lineId: p.lineId,
     appStoreProductId: p.appStoreProductId,
     kind: p.kind as ProductDto['kind'],
     title: p.title,
@@ -411,6 +448,8 @@ function toProductDto(p: Product): ProductDto {
     voiceEnabled: p.voiceEnabled,
     section: p.section as ProductDto['section'],
     sortOrder: p.sortOrder,
+    weeksTier: (p.weeksTier as WeeksTier | null) ?? null,
+    tierLabel: tierLabelText,
   };
 }
 

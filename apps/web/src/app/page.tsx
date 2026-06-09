@@ -174,6 +174,7 @@ export default function HomePage() {
                 <div className="muted" style={{ fontSize: 13 }}>
                   {p.section} · {getFormatDef(p.format).label} ·{' '}
                   {p.periodType === 'period' ? '기간형' : `칸형 ${p.slotCount}칸`}
+                  {p.tierLabel ? ` · ${p.tierLabel}` : ''}
                 </div>
               </div>
               <button className="btn" disabled={busy} onClick={() => grant(p.appStoreProductId)}>

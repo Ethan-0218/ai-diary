@@ -19,6 +19,14 @@ export class Product {
   @Column({ unique: true })
   appStoreProductId!: string;
 
+  /** 한 진열 카드로 묶는 라인 키(주간 티어 4개가 같은 lineId). */
+  @Column()
+  lineId!: string;
+
+  /** 월간 라인의 주간 티어(4/3/2/1). 단일가(칸형/번들)는 null. */
+  @Column({ type: 'int', nullable: true })
+  weeksTier!: number | null;
+
   @Column()
   kind!: string; // 'notebook' | 'bundle' | 'voice_upgrade'
 

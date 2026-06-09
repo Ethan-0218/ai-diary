@@ -1,8 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { tierForRemainingDays, tierLabel } from '@ai-diary/shared';
 import {
   NotebookService,
   todaySlotDate,
   addDays,
+  inclusiveDays,
   parsePeriodSpec,
   serializePeriodSpec,
   periodRange,
@@ -41,6 +43,18 @@ describe('notebook 순수 헬퍼', () => {
     expect(periodRange('month', '2026-02-10')).toEqual({ start: '2026-02-01', end: '2026-02-28' });
     expect(periodRange('year', '2026-06-14')).toEqual({ start: '2026-01-01', end: '2026-12-31' });
     expect(periodRange({ days: 3 }, '2026-06-09')).toEqual({ start: '2026-06-09', end: '2026-06-11' });
+  });
+
+  it('inclusiveDays: 양끝 포함 일수', () => {
+    expect(inclusiveDays('2026-06-14', '2026-06-30')).toBe(17);
+    expect(inclusiveDays('2026-06-01', '2026-06-01')).toBe(1);
+    expect(inclusiveDays('2026-06-28', '2026-06-30')).toBe(3);
+  });
+
+  it('tierForRemainingDays / tierLabel: 4구간', () => {
+    expect([30, 22, 21, 15, 14, 8, 7, 1].map(tierForRemainingDays)).toEqual([4, 4, 3, 3, 2, 2, 1, 1]);
+    expect(tierLabel(4)).toBe('이번 달');
+    expect(tierLabel(3)).toBe('이번 달 남은 약 3주');
   });
 
   it('enumeratePeriodSlots: max(today,start)부터 end까지(월 중=남은 칸만)', () => {
@@ -146,14 +160,57 @@ describe('NotebookService', () => {
     });
   });
 
-  describe('getProducts', () => {
-    it('active 정렬 + DTO 매핑', async () => {
-      products.find.mockResolvedValue([
-        { appStoreProductId: 'a', kind: 'notebook', title: 'T', description: 'D', coverKey: 'k', format: 'plain', periodType: 'period', slotCount: 0, voiceEnabled: false, section: '연대기', sortOrder: 10 },
-      ]);
+  describe('getProducts (라인당 1장 + 주간 티어 해석)', () => {
+    const monthTiers = (line: string, base: string, sortOrder = 10) =>
+      [4, 3, 2, 1].map((t) => ({
+        appStoreProductId: `${base}_w${t}`, lineId: line, weeksTier: t, kind: 'notebook',
+        title: 'M', description: 'd', coverKey: 'k', format: 'plain', periodType: 'period',
+        slotCount: 0, voiceEnabled: false, section: '연대기', sortOrder,
+      }));
+    const cell = {
+      appStoreProductId: 'cell1', lineId: 'novel-30', weeksTier: null, kind: 'notebook',
+      title: 'C', description: 'd', coverKey: 'k', format: 'novel', periodType: 'cell',
+      slotCount: 30, voiceEnabled: false, section: '컬렉션', sortOrder: 40,
+    };
+
+    it('월간 라인=오늘 남은 주 티어 카드, 칸형=단일, sortOrder 정렬', async () => {
+      products.find.mockResolvedValue([cell, ...monthTiers('plain-month', 'pm', 10)]);
+      const out = await service.getProducts('2026-06-14'); // 6월 14일 → 남은 17일 → 티어3
+      expect(out).toHaveLength(2);
+      expect(out[0]).toMatchObject({
+        lineId: 'plain-month', appStoreProductId: 'pm_w3', weeksTier: 3, tierLabel: '이번 달 남은 약 3주',
+      });
+      expect(out[1]).toMatchObject({ lineId: 'novel-30', appStoreProductId: 'cell1', weeksTier: null, tierLabel: null });
+    });
+
+    it('월초=W4 정가 라벨', async () => {
+      products.find.mockResolvedValue(monthTiers('plain-month', 'pm'));
+      const out = await service.getProducts('2026-06-01'); // 남은 30일 → 티어4
+      expect(out[0]).toMatchObject({ appStoreProductId: 'pm_w4', weeksTier: 4, tierLabel: '이번 달' });
+    });
+
+    it('월말=W1', async () => {
+      products.find.mockResolvedValue(monthTiers('plain-month', 'pm'));
+      const out = await service.getProducts('2026-06-28'); // 남은 3일 → 티어1
+      expect(out[0]).toMatchObject({ appStoreProductId: 'pm_w1', weeksTier: 1 });
+    });
+
+    it('무인자 호출=오늘 기준(기본 파라미터), 라인당 1장', async () => {
+      products.find.mockResolvedValue([cell, ...monthTiers('plain-month', 'pm', 10)]);
       const out = await service.getProducts();
-      expect(products.find).toHaveBeenCalledWith(expect.objectContaining({ where: { active: true } }));
-      expect(out[0]).toMatchObject({ appStoreProductId: 'a', section: '연대기' });
+      expect(out).toHaveLength(2);
+      expect(out[0].lineId).toBe('plain-month');
+    });
+
+    it('해당 티어 SKU가 없으면 라인 첫 SKU로 폴백', async () => {
+      // w1만 존재하는데 오늘은 티어4가 필요한 상황
+      products.find.mockResolvedValue([
+        { appStoreProductId: 'pm_w1', lineId: 'plain-month', weeksTier: 1, kind: 'notebook',
+          title: 'M', description: 'd', coverKey: 'k', format: 'plain', periodType: 'period',
+          slotCount: 0, voiceEnabled: false, section: '연대기', sortOrder: 10 },
+      ]);
+      const out = await service.getProducts('2026-06-01');
+      expect(out[0].appStoreProductId).toBe('pm_w1');
     });
   });
 

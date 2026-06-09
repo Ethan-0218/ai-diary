@@ -163,5 +163,3 @@ S4.1 1차 시드(다양한 상품, ASC 등록은 S4.2):
 - `Product`에 필드 추가: **`lineId`**(한 진열 카드로 묶는 키, 예 `plain-month`) · **`weeksTier`**(4/3/2/1, 단일가=null).
 - **`/products`**: lineId로 묶어 **라인당 1장** 진열. 월간 라인은 백엔드가 *오늘* 남은 주 보고 **해당 티어 SKU + 라벨** 반환 → 클라가 그 SKU만 StoreKit 가격 조회·구매(클라는 티어 계산 안 함).
 - **mintFromProduct**: 어느 티어로 사든 `month` → 그 달 남은 날 발행(동일).
-</content>
-</invoke>
