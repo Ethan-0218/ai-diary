@@ -123,8 +123,6 @@ const PRODUCT_LINES: ProductLine[] = [
     sortOrder: 20,
   },
   {
-    // 1차 제외(유저 결정 2026-06-09): 한달의 신문 미출시. 재출시 시 active 줄 삭제.
-    active: false,
     lineId: 'newspaper-month',
     baseProductId: `${APP}.notebook.newspaper_month`,
     tiered: true,
@@ -141,6 +139,8 @@ const PRODUCT_LINES: ProductLine[] = [
     sortOrder: 30,
   },
   {
+    // 1차 제외(유저 ASC 미등록 2026-06-09): 30편의 소설. 등록 시 active 줄 삭제.
+    active: false,
     lineId: 'novel-30',
     baseProductId: `${APP}.notebook.novel_30`,
     tiered: false,

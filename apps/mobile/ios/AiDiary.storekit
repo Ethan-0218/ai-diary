@@ -33,18 +33,18 @@
       "type" : "Consumable"
     },
     {
-      "displayPrice" : "9900",
+      "displayPrice" : "7900",
       "familyShareable" : false,
       "internalID" : "AID0000000000003",
       "localizations" : [
         {
-          "description" : "하루를 한 편의 짧은 소설로. 30칸을 채우면 한 권의 단편집.",
-          "displayName" : "30편의 소설",
+          "description" : "하루를 객관적 기사로 정리하는 한 달치 신문 일기장.",
+          "displayName" : "이달의 신문 (한 달)",
           "locale" : "ko_KR"
         }
       ],
-      "productID" : "com.aidiary.notebook.novel_30",
-      "referenceName" : "30편의 소설",
+      "productID" : "com.aidiary.notebook.newspaper_month_w4",
+      "referenceName" : "이달의 신문 (한 달)",
       "type" : "Consumable"
     },
     {
