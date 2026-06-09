@@ -137,10 +137,10 @@ export class MemoryService implements OnModuleInit {
         }),
       );
 
-      const vectors = await this.embeddings.embedMany([
-        extracted.summary,
-        args.diaryContent,
-      ]);
+      const vectors = await this.embeddings.embedMany(
+        [extracted.summary, args.diaryContent],
+        { conversationId: args.conversationId },
+      );
       await this.storeEmbedding('episodic', episode.id, args.userId, vectors[0]);
       await this.storeEmbedding('diary', args.diaryId, args.userId, vectors[1]);
     } catch (e) {
@@ -240,9 +240,17 @@ export class MemoryService implements OnModuleInit {
    * 질의와 의미적으로 가까운 과거 기억을 pgvector로 회수(대화 중 recallMemory 툴).
    * 실패 시 빈 배열.
    */
-  async recall(userId: string, query: string, k = 3): Promise<RecalledMemory[]> {
+  async recall(
+    userId: string,
+    query: string,
+    conversationId?: string,
+    k = 3,
+  ): Promise<RecalledMemory[]> {
     try {
-      const qVec = await this.embeddings.embed(query);
+      const qVec = await this.embeddings.embed(
+        query,
+        conversationId ? { conversationId } : undefined,
+      );
       const rows: Array<{ ownerType: string; ownerId: string }> =
         await this.dataSource.query(
           `SELECT "ownerType","ownerId"

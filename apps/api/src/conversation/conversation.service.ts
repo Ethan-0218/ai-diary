@@ -403,6 +403,7 @@ export class ConversationService {
       'photo_caption',
       'diary_generation',
       'memory_extraction',
+      'memory_embedding',
     ];
     const byStep = Object.fromEntries(
       steps.map((s) => [s, { calls: 0, costUsd: 0, tokens: 0 }]),

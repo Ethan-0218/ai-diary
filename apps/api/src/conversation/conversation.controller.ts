@@ -161,7 +161,7 @@ export class ConversationController {
             query: z.string().describe('회수하고 싶은 주제/키워드'),
           }),
           execute: async ({ query }) => ({
-            memories: await this.memory.recall(req.userId, query),
+            memories: await this.memory.recall(req.userId, query, id),
           }),
         }),
         updateCollectionState: tool({

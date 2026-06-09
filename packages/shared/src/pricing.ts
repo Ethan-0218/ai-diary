@@ -11,6 +11,8 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   'gpt-5.4-mini': { input: 0.75, output: 4.5 },
   'gpt-5.4': { input: 2.5, output: 15.0 }, // 캐시입력 $0.25
   'gpt-5.5': { input: 5.0, output: 30.0 }, // 캐시입력 $0.50
+  // 임베딩(기억 의미검색용) — 입력 토큰만 과금, 출력 없음. (OpenAI, 2026-06)
+  'text-embedding-3-small': { input: 0.02, output: 0 },
 };
 
 /**

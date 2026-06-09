@@ -88,7 +88,9 @@ describe('MemoryService', () => {
       expect(episodes.save).toHaveBeenCalledWith(
         expect.objectContaining({ conversationId: 'c1', summary: '오늘 달림', mood: '상쾌' }),
       );
-      expect(embeddings.embedMany).toHaveBeenCalledWith(['오늘 달림', '일기 본문']);
+      expect(embeddings.embedMany).toHaveBeenCalledWith(['오늘 달림', '일기 본문'], {
+        conversationId: 'c1',
+      });
       // 에피소드 + 일기 임베딩 upsert 2건 (스키마 쿼리 제외)
       const inserts = dataSource.query.mock.calls.filter((c: any[]) => /INSERT INTO memory_embedding/.test(c[0]));
       expect(inserts).toHaveLength(2);
@@ -156,12 +158,13 @@ describe('MemoryService', () => {
       diaries.findOne.mockImplementation(({ where }: any) =>
         where.id === 'd1' ? { id: 'd1', content: 'X'.repeat(500), createdAt: new Date('2026-06-08') } : null,
       );
-      const out = await service.recall('u1', '프로젝트');
+      const out = await service.recall('u1', '프로젝트', 'c1');
       expect(out).toEqual([
         { type: 'episodic', text: '에피', date: '2026-06-08' },
         { type: 'diary', text: 'X'.repeat(400), date: '2026-06-08' },
       ]);
-      expect(embeddings.embed).toHaveBeenCalledWith('프로젝트');
+      // conversationId 주면 비용 귀속 ctx 전달
+      expect(embeddings.embed).toHaveBeenCalledWith('프로젝트', { conversationId: 'c1' });
     });
 
     it('실패 시 빈 배열', async () => {

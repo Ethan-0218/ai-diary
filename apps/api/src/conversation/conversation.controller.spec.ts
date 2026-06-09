@@ -229,7 +229,7 @@ describe('ConversationController', () => {
     expect(await cfg.tools.recallMemory.execute({ query: '프로젝트' })).toEqual({
       memories: [{ type: 'episodic', text: '지난 일', date: '2026-06-01' }],
     });
-    expect(memory.recall).toHaveBeenCalledWith('u1', '프로젝트');
+    expect(memory.recall).toHaveBeenCalledWith('u1', '프로젝트', 'c1');
 
     // onError
     cfg.onError({ error: new Error('boom') });
