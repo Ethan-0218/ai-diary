@@ -18,8 +18,9 @@ import {
   type CostSummary,
 } from '@ai-diary/shared';
 import { api, absoluteUrl } from '../lib/api';
+import { toUserMessage } from '../lib/errors';
 import { resolvePhotoTokens } from '../lib/photo-tokens';
-import { Badge, Button, Card } from '../components/ui';
+import { Badge, Button, Card, ErrorState } from '../components/ui';
 import { colors, radius, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -27,6 +28,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
   const { conversationId: id } = route.params;
   const { width } = useWindowDimensions();
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [costs, setCosts] = useState<CostSummary | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [reviseInput, setReviseInput] = useState('');
@@ -38,6 +40,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
   const [showConversation, setShowConversation] = useState(false);
 
   const load = () => {
+    setLoadError(null);
     api
       .getConversation(id)
       .then((d) => {
@@ -46,7 +49,8 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
         setSavedFeedback(d.feedback?.content ?? '');
         setSavedAt(d.feedback?.updatedAt ?? null);
       })
-      .catch(() => {});
+      .catch((e) => setLoadError(toUserMessage(e)));
+    // 비용은 부가 정보 — 실패해도 화면을 막지 않는다.
     api.getCosts(id).then(setCosts).catch(() => {});
   };
   useEffect(load, [id]);
@@ -59,7 +63,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
       setFeedback(res.feedback?.content ?? '');
       setSavedAt(res.feedback?.updatedAt ?? null);
     } catch (e: any) {
-      Alert.alert('피드백 저장 실패', e?.message ?? String(e));
+      Alert.alert('피드백 저장 실패', toUserMessage(e));
     } finally {
       setSavingFeedback(false);
     }
@@ -71,7 +75,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
       await api.generateDiary(id);
       load();
     } catch (e: any) {
-      Alert.alert('다시 쓰기 실패', e?.message ?? String(e));
+      Alert.alert('다시 쓰기 실패', toUserMessage(e));
     } finally {
       setRegenerating(false);
     }
@@ -86,12 +90,15 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
       setReviseInput('');
       load();
     } catch (e: any) {
-      Alert.alert('일기 수정 실패', e?.message ?? String(e));
+      Alert.alert('일기 수정 실패', toUserMessage(e));
     } finally {
       setRevising(false);
     }
   };
 
+  if (loadError && !detail) {
+    return <ErrorState message={loadError} onRetry={load} />;
+  }
   if (!detail) {
     return (
       <View style={styles.center}>

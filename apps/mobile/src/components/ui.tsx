@@ -8,7 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { colors, radius } from '../theme';
+import { colors, radius, spacing } from '../theme';
 
 /** web .btn / .btn-primary 대응 버튼 */
 export function Button({
@@ -60,6 +60,32 @@ export function Button({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/** 로드 실패 시 메시지 + 재시도 버튼 (화면 중앙 또는 인라인). */
+export function ErrorState({
+  message,
+  onRetry,
+  retrying,
+  inline,
+}: {
+  message: string;
+  onRetry?: () => void;
+  retrying?: boolean;
+  /** true면 화면을 채우지 않고 인라인 카드로 표시 */
+  inline?: boolean;
+}) {
+  return (
+    <View style={[styles.errorState, !inline && styles.errorStateFill]}>
+      <Text style={styles.errorIcon}>⚠️</Text>
+      <Text style={styles.errorMessage}>{message}</Text>
+      {onRetry && (
+        <View style={{ marginTop: 12 }}>
+          <Button label="다시 시도" onPress={onRetry} loading={retrying} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -120,4 +146,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   badgeText: { color: colors.accent, fontSize: 12, fontWeight: '600' },
+  errorState: { alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  errorStateFill: { flex: 1, backgroundColor: colors.bg },
+  errorIcon: { fontSize: 28, marginBottom: 8 },
+  errorMessage: {
+    color: colors.muted,
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

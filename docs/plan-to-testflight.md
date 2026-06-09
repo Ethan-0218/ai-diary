@@ -139,5 +139,15 @@ TestFlight엔 두 종류:
 - [x] **C. Apple 로그인 — 네이티브/서명 설정 완료** ✅ — Bundle ID `org.reactjs…` → **`com.ai-diary.app`** 전환(Xcode 자동서명, Team=YEONGHAN KWON, 프로비저닝 정상) + **Sign in with Apple** capability/entitlement 추가 + Location(When In Use) usage 설명 채움 + `apps/api/.env` **`APPLE_CLIENT_ID=com.ai-diary.app`**. 새 Bundle ID로 **빌드·설치·부팅·Login 렌더 확인**.
   - [x] **라이브 라운드트립 검증 완료** ✅(2026-06-08) — 시뮬레이터 Apple ID 로그인 → "Sign in with Apple" 탭 → `/auth/login`(aud=com.ai-diary.app) 검증 → JWT 발급 → 토큰 저장 → Home 진입 + authed `listConversations` 성공.
 - S3.4 상세: _(위 — A·B·C + 실기기 대화→일기 E2E 검증 완료 ✅. 개발환경 이슈도 해결: TransformStream 폴리필, 한글 IME(시뮬 한계→실기기 정상·입력칸 uncontrolled), Metro/API 호스트 자동감지(ip.txt+scriptURL, IP 하드코딩 제거). 남은 다듬기는 S3.5)_
-- S3.5 상세: _(아직)_
+### S3.5 상세 — 연동 테스트·개선 (2026-06-08, 진행 중)
+> **목표**: 코어 루프(Home→Chat→Diary)를 실기기에서 견고하게. 브랜치 `s3.5-core-hardening`.
+> **1차 = 코어 루프 하드닝(에러처리·사진·위치/날씨)**.
+
+- [x] **① 에러처리 레이어** — `lib/errors.ts`: `ApiError`(status+body 보존) + `toUserMessage`(네트워크/401/413/404/5xx/quota → 한국어 한 줄). `api.json()`이 ApiError throw로 전환(raw `API 500:` 제거). authFetch가 **401(인증된 요청)→자동 로그아웃**(`setUnauthorizedHandler`로 AuthContext가 signOut 등록). 재사용 `ErrorState`(메시지+재시도) 컴포넌트.
+- [x] **② 화면별 로드 실패·재시도** — Chat/Diary 로드 실패가 무한 스피너·조용한 삼킴 → `ErrorState`+재시도로 전환. Home 히스토리도 `.catch(()=>{})` 제거하고 인라인 에러+재시도+로딩 상태. 전 화면 Alert 메시지를 `toUserMessage`로 통일(Login 포함, Apple 취소는 계속 무시).
+- [x] **③ 사진 하드닝(카메라+라이브러리)** — `lib/photo-picker.ts`: ActionSheet(카메라/보관함 선택) + `classifyPickerResponse`(취소=조용히 / 권한거부=설정 안내 / 오류=throw). Info.plist `NSCameraUsageDescription`·`NSPhotoLibraryUsageDescription` 추가.
+- [x] **④ 위치/날씨(JIT)** — `@react-native-community/geolocation` 설치+pod. `lib/location.ts`: When-In-Use 권한 JIT 요청+8s 타임아웃, 거부/실패=null(코어 루프 불차단). HomeScreen `start`에서 좌표 취득→`createConversation(coords)`. 백엔드 `WeatherService`가 좌표로 날씨 생성→ChatScreen 헤더에 표시(기존 경로).
+- [x] **유닛테스트+tsc 통과**: errors/photo-picker 순수 로직 15개 추가(총 26 green). image-picker(untranspiled TS)는 jest.mock. simctl 빌드로 geolocation 네이티브 링크 컴파일 검증.
+- [ ] **실기기 E2E(남음)**: Honey's iPhone에 리빌드(`yarn ios --device`) 후 — 비행기모드 에러+재시도 / 카메라·보관함 사진 / 위치 권한 첫 허용→날씨 표시 / 권한 거부 시 무날씨 진행 확인.
+- S3.5 상세: _(위 — 코어 하드닝 코드+자동검증 완료, 실기기 E2E만 남음)_
 - …

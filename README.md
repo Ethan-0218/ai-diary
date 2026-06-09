@@ -35,15 +35,15 @@ cp apps/web/.env.example apps/web/.env.local
 pnpm --filter @ai-diary/shared build
 pnpm db:migrate
 
-# 실행 (shared watch + api:9001 + web:9000 동시)
+# 실행 (shared watch + api:9001 + web:9000 + mobile Metro:9002 동시)
 pnpm dev
 ```
 
 ### 개발 스크립트 (루트)
 | 명령 | 설명 |
 |---|---|
-| `pnpm dev` | shared(tsc watch) + api(9001) + web(9000) — 웹/백엔드 개발 |
-| `pnpm dev:all` | 위 + mobile Metro(9002) 까지 한 번에 — 풀스택 개발 |
+| `pnpm dev` | shared(tsc watch) + api(9001) + web(9000) + **mobile Metro(9002)** — 풀스택 개발 |
+| `pnpm dev:web` | 위에서 Metro 빼고 shared + api + web만 — 웹/백엔드만 볼 때 |
 | `pnpm mobile` | mobile Metro(9002)만. shared watch는 `pnpm dev`/`shared:dev`가 따로 떠 있어야 라이브 반영 |
 | `pnpm ios` | iOS 시뮬레이터 빌드·실행 (`apps/mobile`) |
 | `pnpm shared:dev` | shared만 tsc --watch |

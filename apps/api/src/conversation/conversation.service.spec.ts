@@ -58,12 +58,22 @@ describe('buildChatSystem', () => {
     expect(s).not.toContain('updateCollectionState');
     expect(s).toContain('사진 제안 기준');
   });
+
+  it('memoryContext 있으면 기억 블록 주입', () => {
+    const s = buildChatSystem('plain', now, null, null, true, '- (직업) 개발자');
+    expect(s).toContain('[기억 — 이 유저에 대해 이전 대화에서 알게 된 것]');
+    expect(s).toContain('- (직업) 개발자');
+  });
+
+  it('기억 정직성 가드는 항상 포함(아는 척 방지)', () => {
+    expect(buildChatSystem('plain', now, null, null)).toContain('[기억 정직성');
+  });
 });
 
 describe('ConversationService', () => {
   let service: ConversationService;
   let conversations: any, messages: any, attachments: any, diaries: any, feedbacks: any, llmUsages: any;
-  let ai: any, tracing: any, weather: any;
+  let ai: any, tracing: any, weather: any, memory: any;
 
   const convRow = (over: any = {}) => ({
     id: 'c1', userId: 'u1', title: '2026-06-08 일반 일기', format: 'plain', modelId: 'm1',
@@ -88,9 +98,13 @@ describe('ConversationService', () => {
     ai = { resolveModel: jest.fn(() => 'MODEL') };
     tracing = { trace: jest.fn((_ctx: any, _req: any, runner: any) => runner()) };
     weather = { getWeatherNote: jest.fn().mockResolvedValue(null) };
+    memory = {
+      buildContext: jest.fn().mockResolvedValue(null),
+      onDiaryComplete: jest.fn().mockResolvedValue(undefined),
+    };
     mockGen.mockReset();
     mockGen.mockResolvedValue({ text: '생성된 텍스트' });
-    service = new ConversationService(conversations, messages, attachments, diaries, feedbacks, llmUsages, ai, tracing, weather);
+    service = new ConversationService(conversations, messages, attachments, diaries, feedbacks, llmUsages, ai, tracing, weather, memory);
   });
 
   describe('create', () => {
@@ -146,22 +160,12 @@ describe('ConversationService', () => {
       expect(d.feedback?.content).toBe('fb');
     });
 
-    it('첨부 URL: PUBLIC_BASE / PORT / 기본 9001', async () => {
-      const withAtt = () => conversations.findOne.mockResolvedValue(
+    it('첨부 URL: 호스트 없는 상대경로(클라가 절대화)', async () => {
+      conversations.findOne.mockResolvedValue(
         detailRow({ attachments: [{ id: 'a1', filePath: 'x.jpg', caption: null, mimeType: 'image/jpeg', createdAt: new Date() }] }),
       );
-      const url = async () => (await service.getDetail('c1', 'u1')).attachments[0].url;
-      const orig = { PUBLIC_BASE: process.env.PUBLIC_BASE, PORT: process.env.PORT };
-      const restore = (k: 'PUBLIC_BASE' | 'PORT', v?: string) => (v === undefined ? delete process.env[k] : (process.env[k] = v));
-
-      withAtt(); process.env.PUBLIC_BASE = 'http://cdn';
-      expect(await url()).toBe('http://cdn/uploads/x.jpg');
-      withAtt(); delete process.env.PUBLIC_BASE; process.env.PORT = '5555';
-      expect(await url()).toBe('http://localhost:5555/uploads/x.jpg');
-      withAtt(); delete process.env.PORT;
-      expect(await url()).toBe('http://localhost:9001/uploads/x.jpg');
-
-      restore('PUBLIC_BASE', orig.PUBLIC_BASE); restore('PORT', orig.PORT);
+      const d = await service.getDetail('c1', 'u1');
+      expect(d.attachments[0].url).toBe('/uploads/x.jpg');
     });
 
     it('없으면/타인이면 NotFound', async () => {
@@ -225,16 +229,22 @@ describe('ConversationService', () => {
       ]);
     });
 
-    it('generateDiary: transcript+사진설명 생성 후 저장', async () => {
+    it('generateDiary: transcript+사진설명 생성 후 저장 + 기억 연속성·후처리', async () => {
       attachments.find.mockResolvedValue([{ caption: '무대 사진' }, { caption: null }]);
+      memory.buildContext.mockResolvedValue('[최근 기록]\n- 어제: 발표 준비');
       const r = await service.generateDiary('c1', 'u1');
-      const prompt = mockGen.mock.calls[0][0].prompt;
-      expect(prompt).toContain('나: 오늘 발표했어');
-      expect(prompt).toContain('AI: 어땠어?');
-      expect(prompt).toContain('사진1: 무대 사진');
-      expect(prompt).toContain('사진2: (설명 없음)');
+      const call = mockGen.mock.calls[0][0];
+      expect(call.prompt).toContain('나: 오늘 발표했어');
+      expect(call.prompt).toContain('AI: 어땠어?');
+      expect(call.prompt).toContain('사진1: 무대 사진');
+      expect(call.prompt).toContain('사진2: (설명 없음)');
+      expect(call.system).toContain('[과거 맥락 — 연속성 참고용]');
       expect(diaries.upsert).toHaveBeenCalled();
       expect(r.diary.content).toBe('일기');
+      // 후처리 추출 호출
+      expect(memory.onDiaryComplete).toHaveBeenCalledWith(
+        expect.objectContaining({ conversationId: 'c1', userId: 'u1', diaryId: 'd1' }),
+      );
     });
 
     it('reviseDiary: 기존 일기 있으면 수정 프롬프트', async () => {

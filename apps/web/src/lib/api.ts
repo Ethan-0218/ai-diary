@@ -10,6 +10,12 @@ import type {
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:9001';
 
+/** 서버가 주는 상대경로(/uploads/..)를 API_BASE 기준 절대 URL로. 이미 절대면 그대로. */
+export function absoluteUrl(url: string): string {
+  if (/^https?:\/\//.test(url)) return url;
+  return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 // 개발 하니스용 자동 로그인 — 고정 dev 유저로 액세스 토큰을 1회 발급해 캐시한다.
 // (실제 소셜 로그인 UI는 모바일 S3.4 몫. web은 테스트 용도라 dev-login으로 대체.)
 let tokenPromise: Promise<string> | null = null;

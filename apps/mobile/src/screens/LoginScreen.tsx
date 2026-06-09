@@ -6,6 +6,7 @@ import {
   AppleButton,
 } from '@invertase/react-native-apple-authentication';
 import { useAuth } from '../auth/AuthContext';
+import { toUserMessage } from '../lib/errors';
 import { Button } from '../components/ui';
 import { colors } from '../theme';
 
@@ -20,7 +21,7 @@ export function LoginScreen() {
     } catch (e: any) {
       // 사용자가 취소한 경우는 조용히 무시
       if (e?.code !== appleAuth.Error.CANCELED) {
-        Alert.alert(`${label} 실패`, e?.message ?? String(e));
+        Alert.alert(`${label} 실패`, toUserMessage(e));
       }
     } finally {
       setBusy(false);

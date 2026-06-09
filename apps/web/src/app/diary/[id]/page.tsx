@@ -7,7 +7,7 @@ import {
   type ConversationDetail,
   type CostSummary,
 } from '@ai-diary/shared';
-import { api } from '@/lib/api';
+import { api, absoluteUrl } from '@/lib/api';
 
 /**
  * 일기 본문의 `![](사진N)` 플레이스홀더를 실제 첨부 이미지 URL로 치환한다.
@@ -21,7 +21,7 @@ function resolvePhotoTokens(
     /(!\[[^\]]*\]\()\s*사진\s*(\d+)\s*(\))/g,
     (full, pre: string, n: string, post: string) => {
       const att = attachments[Number(n) - 1];
-      return att ? `${pre}${att.url}${post}` : full;
+      return att ? `${pre}${absoluteUrl(att.url)}${post}` : full;
     },
   );
 }
@@ -251,7 +251,7 @@ export default function DiaryPage({
             {detail.attachments.map((a) => (
               <figure key={a.id} style={{ margin: 0, maxWidth: 200 }}>
                 <img
-                  src={a.url}
+                  src={absoluteUrl(a.url)}
                   alt={a.caption ?? ''}
                   style={{
                     width: '100%',

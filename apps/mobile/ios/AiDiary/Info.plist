@@ -33,8 +33,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>오늘의 순간을 찍어 일기에 담기 위해 카메라를 사용합니다</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>날씨를 일기에 적기 위해 위치를 사용합니다</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>일기에 곁들일 사진을 고르기 위해 사진 보관함을 사용합니다</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
