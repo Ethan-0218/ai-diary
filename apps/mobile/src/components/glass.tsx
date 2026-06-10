@@ -8,21 +8,21 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import { colors, formatColors, gradients, radius, spacing } from '../theme';
+import { colors, formatColors, radius, spacing } from '../theme';
 import type { DiaryFormat } from '@ai-diary/shared';
 
-/** 밤하늘 그라데이션 화면 배경. 모든 적응형 홈 화면을 감싼다. */
+/**
+ * 그라데이션은 네이티브 의존성 없이 "단색 + 반투명 오버레이 층"으로 근사한다.
+ * (react-native-linear-gradient는 RN New Architecture에서 링커 충돌 → 미사용)
+ */
+
+/** 밤하늘 배경 — 단색 딥다크 + 상단 라벤더 글로우(은은한 발광). */
 export function NightBackground({ children }: { children: ReactNode }) {
   return (
-    <LinearGradient
-      colors={gradients.night}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={styles.night}
-    >
+    <View style={styles.night}>
+      <View style={styles.nightGlow} pointerEvents="none" />
       {children}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -44,7 +44,7 @@ export function GlassCard({
   );
 }
 
-/** 라벤더 그라데이션 CTA 버튼(pill-cta). */
+/** 라벤더 CTA 버튼(pill-cta). */
 export function GradientButton({
   label,
   onPress,
@@ -63,19 +63,18 @@ export function GradientButton({
 }) {
   const off = disabled || loading;
   return (
-    <Pressable onPress={onPress} disabled={off} style={[off && { opacity: 0.5 }, style]}>
-      <LinearGradient
-        colors={gradients.lavCta}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.cta}
-      >
-        {loading && (
-          <ActivityIndicator size="small" color={colors.onLav} style={{ marginRight: 8 }} />
-        )}
-        <Text style={styles.ctaText}>{label}</Text>
-        {trailing ? <Text style={styles.ctaTrailing}> {trailing}</Text> : null}
-      </LinearGradient>
+    <Pressable
+      onPress={onPress}
+      disabled={off}
+      style={[styles.cta, off && styles.ctaOff, style]}
+    >
+      {/* 상단 광택 */}
+      <View style={styles.ctaGloss} pointerEvents="none" />
+      {loading && (
+        <ActivityIndicator size="small" color={colors.onLav} style={styles.ctaSpin} />
+      )}
+      <Text style={styles.ctaText}>{label}</Text>
+      {trailing ? <Text style={styles.ctaTrailing}> {trailing}</Text> : null}
     </Pressable>
   );
 }
@@ -85,12 +84,7 @@ export function ProgressBar({ ratio }: { ratio: number }) {
   const pct = Math.max(0, Math.min(1, ratio));
   return (
     <View style={styles.progTrack}>
-      <LinearGradient
-        colors={[colors.lav, colors.lav2]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={[styles.progFill, { width: `${pct * 100}%` }]}
-      />
+      <View style={[styles.progFill, { width: `${pct * 100}%` }]} />
     </View>
   );
 }
@@ -102,8 +96,8 @@ const FORMAT_KEY: Record<DiaryFormat, keyof typeof formatColors> = {
 };
 
 /**
- * 포맷별 그라데이션 책 표지(정적 — 추후 3D 책으로 교체 예정).
- * 책등(왼쪽 세로선)·페이지(오른쪽 밝은 가장자리)로 책 느낌을 낸다.
+ * 포맷별 책 표지(정적 — 추후 3D 책으로 교체 예정).
+ * 단색(c1) 베이스 + 상단 흰 광택 + 하단 어둠 + 책등(왼쪽 세로선)·페이지(오른쪽).
  */
 export function BookCover({
   format,
@@ -126,28 +120,30 @@ export function BookCover({
         ]}
       />
       {/* 표지 */}
-      <LinearGradient
-        colors={[c1, c2]}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.bookCover}
-      >
+      <View style={[styles.bookCover, { backgroundColor: c1 }]}>
+        {/* 하단 깊이(어두운 c2 톤) */}
+        <View style={[styles.bookShade, { backgroundColor: c2 }]} pointerEvents="none" />
         {/* 상단 광택 */}
-        <LinearGradient
-          colors={['rgba(255,255,255,0.30)', 'rgba(255,255,255,0)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 0.45 }}
-          style={StyleSheet.absoluteFill}
-        />
+        <View style={styles.bookGloss} pointerEvents="none" />
         {/* 책등 라인 */}
         <View style={[styles.bookSpine, { left: width * 0.16 }]} />
-      </LinearGradient>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  night: { flex: 1 },
+  night: { flex: 1, backgroundColor: '#0b0a11' },
+  nightGlow: {
+    position: 'absolute',
+    top: -160,
+    alignSelf: 'center',
+    width: 460,
+    height: 460,
+    borderRadius: 230,
+    backgroundColor: '#2c2746',
+    opacity: 0.55,
+  },
   glass: {
     backgroundColor: colors.glass,
     borderWidth: 1,
@@ -155,7 +151,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.lg,
   },
-  glassStrong: { borderColor: colors.border2 },
+  glassStrong: { borderColor: colors.border2, backgroundColor: 'rgba(169,156,242,0.10)' },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,7 +159,19 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 16,
     borderRadius: 15,
+    backgroundColor: colors.lav,
+    overflow: 'hidden',
   },
+  ctaOff: { opacity: 0.5 },
+  ctaGloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  ctaSpin: { marginRight: 8 },
   ctaText: { color: colors.onLav, fontSize: 15, fontWeight: '800' },
   ctaTrailing: { color: colors.onLav, fontSize: 17, fontWeight: '800' },
   progTrack: {
@@ -172,7 +180,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.10)',
     overflow: 'hidden',
   },
-  progFill: { height: '100%', borderRadius: 99 },
+  progFill: { height: '100%', borderRadius: 99, backgroundColor: colors.lav },
   bookCover: {
     flex: 1,
     borderTopLeftRadius: 3,
@@ -180,6 +188,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 11,
     borderBottomRightRadius: 11,
     overflow: 'hidden',
+  },
+  bookShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '55%',
+    opacity: 0.5,
+  },
+  bookGloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '38%',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   bookPages: {
     position: 'absolute',

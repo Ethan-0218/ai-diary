@@ -6,6 +6,13 @@ require Pod::Executable.execute_command('node', ['-p',
   )', __dir__]).strip
 
 platform :ios, min_ios_version_supported
+
+# Xcode 26 + RN 0.84 우회: prebuilt React Core 프레임워크가 시뮬레이터 Debug 빌드의
+# 분리 링크 단계(AiDiary.debug.dylib / __preview.dylib)에서 'React_RCTAppDelegate
+# framework not found'로 실패한다. React Core를 소스에서 빌드하도록 강제해 우회.
+# (Xcode/RN 업데이트로 prebuilt가 고쳐지면 이 줄을 제거해 빌드 속도를 되돌릴 수 있음)
+ENV['RCT_USE_PREBUILT_RNCORE'] ||= '0'
+
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
