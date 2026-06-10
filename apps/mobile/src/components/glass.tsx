@@ -1,32 +1,57 @@
-import React, { type ReactNode } from 'react';
+import React, { useId, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Svg, {
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  RadialGradient,
+  Rect,
+  Stop,
+} from 'react-native-svg';
+import { BlurView } from '@react-native-community/blur';
 import { colors, formatColors, radius, spacing } from '../theme';
 import type { DiaryFormat } from '@ai-diary/shared';
 
 /**
- * 그라데이션은 네이티브 의존성 없이 "단색 + 반투명 오버레이 층"으로 근사한다.
- * (react-native-linear-gradient는 RN New Architecture에서 링커 충돌 → 미사용)
+ * 그라데이션·발광은 react-native-svg로 그린다(웹 radial-gradient/linear-gradient 재현).
+ * 웹의 backdrop-filter:blur(글라스 카드 뒤 흐림)는 RN 기본 미지원 → 반투명으로 근사.
  */
 
-/** 밤하늘 배경 — 단색 딥다크 + 상단 라벤더 글로우(은은한 발광). */
+/** 밤하늘 배경 — 딥다크 베이스 + 상단 라벤더 발광(중심→투명 페이드). */
 export function NightBackground({ children }: { children: ReactNode }) {
+  const { width, height } = useWindowDimensions();
+  const id = useId();
   return (
     <View style={styles.night}>
-      <View style={styles.nightGlow} pointerEvents="none" />
+      <Svg
+        width={width}
+        height={height}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      >
+        <Defs>
+          {/* 프로토타입 body: radial(900x600 at 50% -10%, #2c2746 → transparent 60%) */}
+          <RadialGradient id={`${id}g`} cx="50%" cy="0%" rx="90%" ry="58%">
+            <Stop offset="0" stopColor="#2c2746" stopOpacity="1" />
+            <Stop offset="0.6" stopColor="#2c2746" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width={width} height={height} fill={`url(#${id}g)`} />
+      </Svg>
       {children}
     </View>
   );
 }
 
-/** 반투명 글라스 카드(다크 배경 위 — blur 없이 반투명으로 근사). */
+/** 글라스 카드 — BlurView로 카드 뒤 배경(라벤더 발광)을 흐려 진짜 글라스모피즘. */
 export function GlassCard({
   children,
   style,
@@ -34,17 +59,27 @@ export function GlassCard({
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** 보더를 한 단계 진하게(히어로/강조 카드). */
+  /** 라벤더 틴트·보더를 한 단계 진하게(히어로/강조 카드). */
   strong?: boolean;
 }) {
   return (
-    <View style={[styles.glass, strong && styles.glassStrong, style]}>
-      {children}
+    <View style={[styles.glassWrap, strong && styles.glassWrapStrong, style]}>
+      <BlurView
+        style={StyleSheet.absoluteFill}
+        blurType="dark"
+        blurAmount={14}
+        reducedTransparencyFallbackColor="#16131f"
+      />
+      <View
+        style={[StyleSheet.absoluteFill, strong ? styles.tintStrong : styles.tint]}
+        pointerEvents="none"
+      />
+      <View style={styles.glassInner}>{children}</View>
     </View>
   );
 }
 
-/** 라벤더 CTA 버튼(pill-cta). */
+/** 라벤더 그라데이션 CTA 버튼(pill-cta). */
 export function GradientButton({
   label,
   onPress,
@@ -96,8 +131,9 @@ const FORMAT_KEY: Record<DiaryFormat, keyof typeof formatColors> = {
 };
 
 /**
- * 포맷별 책 표지(정적 — 추후 3D 책으로 교체 예정).
- * 단색(c1) 베이스 + 상단 흰 광택 + 하단 어둠 + 책등(왼쪽 세로선)·페이지(오른쪽).
+ * 포맷별 그라데이션 책 표지(정적 — 추후 3D 책으로 교체 예정).
+ * 표지 그라데이션(c1→c2) + 상단 광택 + 책등(왼쪽 세로선)·페이지(오른쪽).
+ * 비대칭 모서리(책 모양)는 부모 View의 borderRadius+overflow로 svg를 클립한다.
  */
 export function BookCover({
   format,
@@ -110,6 +146,7 @@ export function BookCover({
 }) {
   const { c1, c2 } = formatColors[FORMAT_KEY[format]];
   const height = width * 1.34;
+  const id = useId();
   return (
     <View style={[{ width, height }, style]}>
       {/* 페이지(오른쪽 종이) — 표지 뒤로 살짝 보임 */}
@@ -119,12 +156,22 @@ export function BookCover({
           { top: height * 0.1, bottom: -3, right: -3, left: width * 0.16 },
         ]}
       />
-      {/* 표지 */}
-      <View style={[styles.bookCover, { backgroundColor: c1 }]}>
-        {/* 하단 깊이(어두운 c2 톤) */}
-        <View style={[styles.bookShade, { backgroundColor: c2 }]} pointerEvents="none" />
-        {/* 상단 광택 */}
-        <View style={styles.bookGloss} pointerEvents="none" />
+      {/* 표지(비대칭 모서리로 클립) */}
+      <View style={styles.bookCover}>
+        <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <SvgLinearGradient id={`${id}c`} x1="0.15" y1="0" x2="0.55" y2="1">
+              <Stop offset="0" stopColor={c1} />
+              <Stop offset="1" stopColor={c2} />
+            </SvgLinearGradient>
+            <SvgLinearGradient id={`${id}g`} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#ffffff" stopOpacity="0.34" />
+              <Stop offset="0.42" stopColor="#ffffff" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={width} height={height} fill={`url(#${id}c)`} />
+          <Rect x="0" y="0" width={width} height={height} fill={`url(#${id}g)`} />
+        </Svg>
         {/* 책등 라인 */}
         <View style={[styles.bookSpine, { left: width * 0.16 }]} />
       </View>
@@ -133,25 +180,17 @@ export function BookCover({
 }
 
 const styles = StyleSheet.create({
-  night: { flex: 1, backgroundColor: '#0b0a11' },
-  nightGlow: {
-    position: 'absolute',
-    top: -160,
-    alignSelf: 'center',
-    width: 460,
-    height: 460,
-    borderRadius: 230,
-    backgroundColor: '#2c2746',
-    opacity: 0.55,
-  },
-  glass: {
-    backgroundColor: colors.glass,
+  night: { flex: 1, backgroundColor: '#08070d' },
+  glassWrap: {
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
-    padding: spacing.lg,
+    overflow: 'hidden',
   },
-  glassStrong: { borderColor: colors.border2, backgroundColor: 'rgba(169,156,242,0.10)' },
+  glassWrapStrong: { borderColor: colors.border2 },
+  glassInner: { padding: spacing.lg },
+  tint: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  tintStrong: { backgroundColor: 'rgba(169,156,242,0.12)' },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -159,10 +198,9 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 16,
     borderRadius: 15,
-    backgroundColor: colors.lav,
+    backgroundColor: colors.lav2,
     overflow: 'hidden',
   },
-  ctaOff: { opacity: 0.5 },
   ctaGloss: {
     position: 'absolute',
     top: 0,
@@ -171,6 +209,7 @@ const styles = StyleSheet.create({
     height: '50%',
     backgroundColor: 'rgba(255,255,255,0.18)',
   },
+  ctaOff: { opacity: 0.5 },
   ctaSpin: { marginRight: 8 },
   ctaText: { color: colors.onLav, fontSize: 15, fontWeight: '800' },
   ctaTrailing: { color: colors.onLav, fontSize: 17, fontWeight: '800' },
@@ -188,22 +227,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 11,
     borderBottomRightRadius: 11,
     overflow: 'hidden',
-  },
-  bookShade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '55%',
-    opacity: 0.5,
-  },
-  bookGloss: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '38%',
-    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   bookPages: {
     position: 'absolute',
