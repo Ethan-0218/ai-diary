@@ -78,7 +78,7 @@ function RootNavigator() {
 function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
       <AuthProvider>
         <NavigationContainer>
           <RootNavigator />

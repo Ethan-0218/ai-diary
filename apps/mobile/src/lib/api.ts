@@ -8,6 +8,7 @@ import type {
   ProductDto,
   NotebookDto,
   NotebookDetailDto,
+  HomeSummaryDto,
 } from '@ai-diary/shared';
 import { API_BASE } from './config';
 import { ApiError, notifyUnauthorized } from './errors';
@@ -106,6 +107,14 @@ export const api = {
 
   listNotebooks: () =>
     authFetch(`${API_BASE}/notebooks`).then((r) => json<NotebookDto[]>(r)),
+
+  /** 적응형 홈(오늘) 요약 — 유저 타임존으로 오늘 칸·3상태를 서버가 확정. */
+  getHomeSummary: () => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return authFetch(
+      `${API_BASE}/notebooks/home?tz=${encodeURIComponent(tz)}`,
+    ).then((r) => json<HomeSummaryDto>(r));
+  },
 
   getNotebook: (id: string) =>
     authFetch(`${API_BASE}/notebooks/${id}`).then((r) =>
