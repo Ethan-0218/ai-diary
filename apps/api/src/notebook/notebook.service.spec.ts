@@ -10,6 +10,7 @@ import {
   serializePeriodSpec,
   periodRange,
   enumeratePeriodSlots,
+  excerptText,
 } from './notebook.service';
 
 describe('notebook 순수 헬퍼', () => {
@@ -108,8 +109,15 @@ describe('NotebookService', () => {
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
     };
-    conversations = { find: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}) };
-    diaries = { exist: jest.fn().mockResolvedValue(false) };
+    conversations = {
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue({}),
+    };
+    diaries = {
+      exist: jest.fn().mockResolvedValue(false),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
     service = new NotebookService(notebooks, slots, products, conversations, diaries);
   });
 
@@ -377,5 +385,165 @@ describe('NotebookService', () => {
       await service.markSlotFilledByConversation('c1');
       expect(slots.update).toHaveBeenCalledWith({ conversationId: 'c1' }, { status: 'filled' });
     });
+  });
+
+  describe('getHomeSummary (적응형 홈 3상태 + firm/soft)', () => {
+    const TODAY = '2026-06-09';
+    beforeEach(() => {
+      // KST 12:00 = 2026-06-09 (새벽5시 컷 이후) → 결정적 today
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-09T03:00:00Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('s0: active 일기장 없음 → 빈 존', async () => {
+      notebooks.find.mockResolvedValue([]);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out).toMatchObject({ date: TODAY, state: 's0', firm: [], soft: [], todayDiary: null });
+      expect(notebooks.find).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'u1', status: 'active' } }),
+      );
+    });
+
+    it('s1: 기간형 오늘칸 empty → firm에 empty 상태', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbP', periodType: 'period' })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: TODAY, status: 'empty', conversationId: null },
+      ]);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.state).toBe('s1');
+      expect(out.firm).toHaveLength(1);
+      expect(out.firm[0]).toMatchObject({ todaySlotState: 'empty', todayConversationId: null });
+      expect(out.firm[0].notebook.id).toBe('nbP');
+      expect(out.soft).toEqual([]);
+    });
+
+    it('s2: 오늘칸 drafting → 대화 id 노출', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbP', periodType: 'period' })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: TODAY, status: 'drafting', conversationId: 'c1' },
+      ]);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.state).toBe('s2');
+      expect(out.firm[0]).toMatchObject({ todaySlotState: 'drafting', todayConversationId: 'c1' });
+    });
+
+    it('s3: 오늘칸 filled → todayDiary 미리보기 채움', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbP', periodType: 'period' })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: TODAY, status: 'filled', conversationId: 'c1' },
+      ]);
+      diaries.findOne.mockResolvedValue({ content: '# 제목\n오늘은 좋은 날이었다.', format: 'plain' });
+      conversations.findOne.mockResolvedValue({ id: 'c1', title: '좋은 날' });
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.state).toBe('s3');
+      expect(out.todayDiary).toMatchObject({
+        conversationId: 'c1', notebookId: 'nbP', title: '좋은 날', format: 'plain',
+      });
+      expect(out.todayDiary?.excerpt).toContain('오늘은 좋은 날');
+    });
+
+    it('칸형(cell)은 soft 존으로, 진행도(filledCount) 집계', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbC', periodType: 'cell', slotCount: 30 })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: '2026-06-01', status: 'filled', conversationId: 'a' },
+        { index: 2, slotDate: null, status: 'empty', conversationId: null },
+      ]);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.firm).toEqual([]);
+      expect(out.soft).toHaveLength(1);
+      expect(out.soft[0].notebook).toMatchObject({ id: 'nbC', filledCount: 1, slotCount: 30 });
+      expect(out.state).toBe('s1'); // 오늘칸 없음 = 오늘 활동 없음
+    });
+
+    it('기간 밖(오늘칸 없음)이면 todaySlotState=none', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbP', periodType: 'period' })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: '2026-05-01', status: 'filled', conversationId: 'x' },
+      ]);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.firm[0].todaySlotState).toBe('none');
+      expect(out.state).toBe('s1');
+    });
+
+    it('filled여도 일기 없으면 todayDiary=null(상태는 s3 유지)', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbP', periodType: 'period' })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: TODAY, status: 'filled', conversationId: 'c1' },
+      ]);
+      diaries.findOne.mockResolvedValue(null);
+      conversations.findOne.mockResolvedValue(null);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.state).toBe('s3');
+      expect(out.todayDiary).toBeNull();
+    });
+
+    it('filled인데 conversationId 없으면 일기 조회 안 함', async () => {
+      notebooks.find.mockResolvedValue([nb({ id: 'nbP', periodType: 'period' })]);
+      slots.find.mockResolvedValue([
+        { index: 1, slotDate: TODAY, status: 'filled', conversationId: null },
+      ]);
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.state).toBe('s3');
+      expect(out.todayDiary).toBeNull();
+      expect(diaries.findOne).not.toHaveBeenCalled();
+    });
+
+    it('우선순위: 한 권 filled + 다른 권 drafting → s3', async () => {
+      notebooks.find.mockResolvedValue([
+        nb({ id: 'nbA', periodType: 'period' }),
+        nb({ id: 'nbB', periodType: 'period' }),
+      ]);
+      slots.find
+        .mockResolvedValueOnce([{ index: 1, slotDate: TODAY, status: 'filled', conversationId: 'c1' }])
+        .mockResolvedValueOnce([{ index: 1, slotDate: TODAY, status: 'drafting', conversationId: 'c2' }]);
+      diaries.findOne.mockResolvedValue({ content: '내용', format: 'plain' });
+      conversations.findOne.mockResolvedValue({ id: 'c1', title: 'T' });
+      const out = await service.getHomeSummary('u1', 'Asia/Seoul');
+      expect(out.state).toBe('s3');
+      expect(out.firm).toHaveLength(2);
+    });
+
+    it('기본 타임존(인자 생략)에서도 동작', async () => {
+      notebooks.find.mockResolvedValue([]);
+      const out = await service.getHomeSummary('u1');
+      expect(out.state).toBe('s0');
+      expect(out.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+});
+
+describe('excerptText', () => {
+  it('헤더/강조/코드 기호 제거', () => {
+    const out = excerptText('# 제목\n본문 **굵게** _기울임_ `코드`');
+    expect(out).toContain('제목');
+    expect(out).toContain('굵게');
+    expect(out).not.toContain('*');
+    expect(out).not.toContain('`');
+    expect(out).not.toContain('#');
+  });
+
+  it('링크는 텍스트만, 이미지는 제거', () => {
+    const out = excerptText('[네이버](https://naver.com) ![alt](img.png) 끝');
+    expect(out).toContain('네이버');
+    expect(out).toContain('끝');
+    expect(out).not.toContain('naver.com');
+    expect(out).not.toContain('img.png');
+  });
+
+  it('코드블록 제거', () => {
+    const out = excerptText('앞\n```\ncode\n```\n뒤');
+    expect(out).toContain('앞');
+    expect(out).toContain('뒤');
+    expect(out).not.toContain('code');
+  });
+
+  it('짧은 본문은 말줄임 없음', () => {
+    expect(excerptText('짧은 글')).toBe('짧은 글');
+  });
+
+  it('max 초과 시 말줄임표', () => {
+    const out = excerptText('가'.repeat(200), 50);
+    expect(out.endsWith('…')).toBe(true);
+    expect(out.length).toBe(51);
   });
 });

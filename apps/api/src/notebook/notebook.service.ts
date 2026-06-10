@@ -12,6 +12,11 @@ import {
   isStarterFormat,
   tierForRemainingDays,
   tierLabel,
+  type HomeFirmNotebook,
+  type HomeSoftNotebook,
+  type HomeSummaryDto,
+  type HomeTodayDiary,
+  type HomeTodayState,
   type NotebookDetailDto,
   type NotebookDto,
   type NotebookSource,
@@ -261,6 +266,83 @@ export class NotebookService implements OnModuleInit {
     );
   }
 
+  /**
+   * 적응형 홈(오늘) 요약 — s3.1 §4. 유저 타임존(새벽5시 컷)으로 오늘을 확정하고,
+   * active 일기장을 firm(기간형=연대기)/soft(칸형=컬렉션)로 나눠, 각 권의 오늘 칸
+   * 상태와 전역 3상태(s0~s3), 오늘 완성된 일기 미리보기를 한 번에 내려준다.
+   */
+  async getHomeSummary(
+    userId: string,
+    timeZone: string = DEFAULT_TZ,
+  ): Promise<HomeSummaryDto> {
+    const today = todaySlotDate(new Date(), timeZone);
+    const rows = await this.notebooks.find({
+      where: { userId, status: 'active' },
+      order: { createdAt: 'DESC' },
+    });
+
+    const firm: HomeFirmNotebook[] = [];
+    const soft: HomeSoftNotebook[] = [];
+    let anyDrafting = false;
+    let anyFilled = false;
+    let todayDiary: HomeTodayDiary | null = null;
+
+    for (const n of rows) {
+      const slots = await this.slots.find({
+        where: { notebookId: n.id },
+        order: { index: 'ASC' },
+      });
+      const filled = slots.filter((s) => s.status === 'filled').length;
+      const dto = toNotebookDto(n, filled);
+      const todaySlot = slots.find((s) => s.slotDate === today) ?? null;
+
+      if (todaySlot?.status === 'drafting') anyDrafting = true;
+      if (todaySlot?.status === 'filled') {
+        anyFilled = true;
+        if (!todayDiary && todaySlot.conversationId) {
+          todayDiary = await this.buildTodayDiary(n.id, todaySlot.conversationId);
+        }
+      }
+
+      if (n.periodType === 'period') {
+        firm.push({
+          notebook: dto,
+          todaySlotState: (todaySlot?.status as HomeFirmNotebook['todaySlotState']) ?? 'none',
+          todayConversationId: todaySlot?.conversationId ?? null,
+        });
+      } else {
+        soft.push({ notebook: dto });
+      }
+    }
+
+    let state: HomeTodayState;
+    if (rows.length === 0) state = 's0';
+    else if (anyFilled) state = 's3';
+    else if (anyDrafting) state = 's2';
+    else state = 's1';
+
+    return { date: today, state, firm, soft, todayDiary };
+  }
+
+  /** 오늘 칸의 대화+일기로 today-diary 미리보기 구성(둘 다 있어야 반환). */
+  private async buildTodayDiary(
+    notebookId: string,
+    conversationId: string,
+  ): Promise<HomeTodayDiary | null> {
+    const [diary, conv] = await Promise.all([
+      this.diaries.findOne({ where: { conversationId } }),
+      this.conversations.findOne({ where: { id: conversationId } }),
+    ]);
+    if (!diary || !conv) return null;
+    return {
+      conversationId: conv.id,
+      notebookId,
+      title: conv.title,
+      excerpt: excerptText(diary.content),
+      format: diary.format as HomeTodayDiary['format'],
+    };
+  }
+
   /** 소유자(userId)가 아니면 NotFound(존재 노출 방지). 칸 포함 상세 반환. */
   async getNotebook(id: string, userId: string): Promise<NotebookDetailDto> {
     const n = await this.requireNotebook(id, userId);
@@ -471,6 +553,19 @@ export function enumeratePeriodSlots(
     index += 1;
   }
   return specs;
+}
+
+/** 마크다운 본문에서 장식을 걷어내고 앞부분을 발췌한다(홈 today-diary 미리보기용). */
+export function excerptText(markdown: string, max = 120): string {
+  const plain = markdown
+    .replace(/```[\s\S]*?```/g, ' ') // 코드블록
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ') // 이미지
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // 링크 → 텍스트
+    .replace(/^[#>\s]+/gm, '') // 헤더/인용 머리
+    .replace(/[*_`~]+/g, '') // 강조/코드 기호
+    .replace(/\s+/g, ' ')
+    .trim();
+  return plain.length > max ? `${plain.slice(0, max).trimEnd()}…` : plain;
 }
 
 function toProductDto(p: Product, tierLabelText: string | null): ProductDto {

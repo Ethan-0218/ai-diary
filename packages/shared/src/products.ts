@@ -278,3 +278,47 @@ export interface NotebookDto {
 export interface NotebookDetailDto extends NotebookDto {
   slots: SlotDto[];
 }
+
+// ─── 적응형 홈(오늘) 요약 ───
+// 홈 화면의 3상태 + firm(연대기)/soft(컬렉션) 존을 한 번에 그리기 위한 계약.
+// 상태·오늘 칸 판정은 서버가 유저 타임존(새벽5시 컷)으로 확정해 내려준다.
+
+/** 오늘 전역 상태 — s3.1 §4 적응형 홈. greet-hero 메시지가 이걸 따라 바뀐다. */
+export type HomeTodayState =
+  | 's0' // 진행 중인(active) 일기장이 하나도 없음 → 스토어 유도
+  | 's1' // 오늘 아직 시작 안 함(쓸 칸은 있음)
+  | 's2' // 오늘 대화 진행 중(아직 일기 없음)
+  | 's3'; // 오늘 일기 완성됨
+
+/** firm 존(기간형=연대기) 한 권 + 오늘 칸의 미세 상태. */
+export interface HomeFirmNotebook {
+  notebook: NotebookDto;
+  /** 오늘 날짜에 해당하는 칸의 상태. 기간 밖이면 'none'. */
+  todaySlotState: 'none' | 'empty' | 'drafting' | 'filled';
+  /** 오늘 칸에 이미 시작된 대화가 있으면 그 id(멱등 재진입용). */
+  todayConversationId: string | null;
+}
+
+/** soft 존(칸형=컬렉션) 한 권. 진행도는 notebook.filledCount/slotCount. */
+export interface HomeSoftNotebook {
+  notebook: NotebookDto;
+}
+
+/** 오늘 완성된 일기의 미리보기(s3에서 today-diary 카드). */
+export interface HomeTodayDiary {
+  conversationId: string;
+  notebookId: string;
+  title: string;
+  /** 본문 앞부분 발췌(마크다운 제거·축약). */
+  excerpt: string;
+  format: DiaryFormat;
+}
+
+export interface HomeSummaryDto {
+  /** 유저 타임존 기준 오늘(YYYY-MM-DD, 새벽5시 컷 적용). */
+  date: string;
+  state: HomeTodayState;
+  firm: HomeFirmNotebook[];
+  soft: HomeSoftNotebook[];
+  todayDiary: HomeTodayDiary | null;
+}

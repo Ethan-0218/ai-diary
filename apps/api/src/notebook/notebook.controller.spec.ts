@@ -16,6 +16,7 @@ describe('NotebookController', () => {
   beforeEach(() => {
     svc = {
       listNotebooks: jest.fn().mockResolvedValue(['nb']),
+      getHomeSummary: jest.fn().mockResolvedValue('summary'),
       mintStarter: jest.fn().mockResolvedValue('starter'),
       mintFromProduct: jest.fn().mockResolvedValue('granted'),
       getNotebook: jest.fn().mockResolvedValue('detail'),
@@ -29,6 +30,15 @@ describe('NotebookController', () => {
     expect(svc.listNotebooks).toHaveBeenCalledWith('u1');
     expect(await c.getOne(req, 'nb1')).toBe('detail');
     expect(svc.getNotebook).toHaveBeenCalledWith('nb1', 'u1');
+  });
+
+  it('home: tz 전달, 빈 tz는 기본(undefined)', async () => {
+    expect(await c.home(req, 'Asia/Seoul')).toBe('summary');
+    expect(svc.getHomeSummary).toHaveBeenCalledWith('u1', 'Asia/Seoul');
+    await c.home(req, '');
+    expect(svc.getHomeSummary).toHaveBeenCalledWith('u1', undefined);
+    await c.home(req);
+    expect(svc.getHomeSummary).toHaveBeenCalledWith('u1', undefined);
   });
 
   it('starter: format 전달, 기본 plain', async () => {

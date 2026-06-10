@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -38,6 +39,12 @@ export class NotebookController {
   @Get()
   list(@Req() req: AuthedRequest) {
     return this.notebooks.listNotebooks(req.userId);
+  }
+
+  /** 적응형 홈(오늘) 요약. tz는 유저 IANA 타임존(없으면 서버 기본). */
+  @Get('home')
+  home(@Req() req: AuthedRequest, @Query('tz') tz?: string) {
+    return this.notebooks.getHomeSummary(req.userId, tz || undefined);
   }
 
   @Post('starter')
