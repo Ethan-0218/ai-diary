@@ -12,6 +12,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { getFormatDef, type ConversationDetail } from '@ai-diary/shared';
@@ -19,9 +21,30 @@ import { api, API_BASE, absoluteUrl, getAuthToken, type RNFile } from '../lib/ap
 import { toUserMessage } from '../lib/errors';
 import { pickPhoto } from '../lib/photo-picker';
 import { detectSignals, stripLeakedToolJson } from '../lib/chat-signals';
-import { Badge, Button, Card, ErrorState } from '../components/ui';
-import { colors, radius, spacing } from '../theme';
+import { ErrorState } from '../components/ui';
+import { BackButton, GradientButton, NightBackground } from '../components/glass';
+import { colors, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
+
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+function chatDate(iso: string): string {
+  const d = new Date(iso);
+  return `오늘 · ${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`;
+}
+
+/** 달 아바타(AI) */
+function MoonAvatar() {
+  return (
+    <View style={styles.aiAva}>
+      <Svg width={15} height={15} viewBox="0 0 24 24">
+        <Path
+          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+          fill="#fbf7ef"
+        />
+      </Svg>
+    </View>
+  );
+}
 
 export function ChatScreen({ route, navigation }: RootScreenProps<'Chat'>) {
   const { conversationId } = route.params;
@@ -40,13 +63,19 @@ export function ChatScreen({ route, navigation }: RootScreenProps<'Chat'>) {
   useEffect(load, [load]);
 
   if (error) {
-    return <ErrorState message={error} onRetry={load} />;
+    return (
+      <NightBackground>
+        <ErrorState message={error} onRetry={load} />
+      </NightBackground>
+    );
   }
   if (!detail) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
+      <NightBackground>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.lav} />
+        </View>
+      </NightBackground>
     );
   }
   return <ChatView detail={detail} navigation={navigation} />;
@@ -59,6 +88,7 @@ function ChatView({
   detail: ConversationDetail;
   navigation: RootScreenProps<'Chat'>['navigation'];
 }) {
+  const insets = useSafeAreaInsets();
   const def = getFormatDef(detail.format);
 
   const initialMessages: UIMessage[] = useMemo(
@@ -96,7 +126,6 @@ function ChatView({
   const [busyDiary, setBusyDiary] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   // 한글 IME 조합 깨짐 방지 — TextInput을 uncontrolled로 두고 ref로 제어한다.
-  // (iOS/Fabric: value를 매 onChangeText마다 되먹이면 native marked-text가 리셋돼 자모가 분리됨)
   const inputRef = useRef<TextInput>(null);
 
   const busy = status === 'streaming' || status === 'submitted';
@@ -106,7 +135,6 @@ function ChatView({
     [messages, detail.collectionState],
   );
 
-  // 새 메시지/스트리밍 시 맨 아래로 스크롤
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     return () => clearTimeout(t);
@@ -167,26 +195,54 @@ function ChatView({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <ScrollView
-        ref={scrollRef}
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
+    <NightBackground>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
-        <View style={styles.headerRow}>
-          <Badge>
-            {def.label} · {detail.modelId}
-          </Badge>
-          {!!detail.weatherNote && (
-            <Text style={styles.weather}>🌤️ {detail.weatherNote}</Text>
-          )}
+        {/* 상단바 */}
+        <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <View style={styles.ctInfo}>
+            <View style={styles.ctTitleRow}>
+              <Text style={styles.ctTitle} numberOfLines={1}>
+                {detail.title || '오늘 이야기'}
+              </Text>
+              <View style={styles.fmtBadge}>
+                <Text style={styles.fmtBadgeTxt}>{def.label}</Text>
+              </View>
+            </View>
+            <Text style={styles.ctSub} numberOfLines={1}>
+              {chatDate(detail.createdAt)}
+            </Text>
+          </View>
+          <Pressable
+            style={styles.chatMake}
+            onPress={finishDiary}
+            disabled={busyDiary}
+          >
+            <Text style={styles.chatMakeTxt}>
+              {busyDiary ? '쓰는 중…' : '일기 만들기'}
+            </Text>
+          </Pressable>
         </View>
 
-        <View style={{ gap: 10, marginTop: spacing.md }}>
+        {/* 대화 본문 */}
+        <ScrollView
+          ref={scrollRef}
+          style={styles.flex}
+          contentContainerStyle={styles.body}
+        >
+          <View style={styles.dayDiv}>
+            <Text style={styles.dayDivTxt}>{chatDate(detail.createdAt)}</Text>
+          </View>
+          {!!detail.weatherNote && (
+            <View style={styles.dayDiv}>
+              <Text style={styles.dayDivTxt}>🌤️ {detail.weatherNote}</Text>
+            </View>
+          )}
+
           {messages.map((m) => (
             <MessageBubble key={m.id} message={m} />
           ))}
@@ -200,90 +256,103 @@ function ChatView({
               </Text>
             </View>
           )}
-        </View>
 
-        {signals.photo && (
-          <Card style={styles.photoHint}>
-            <Text style={{ color: colors.text }}>
-              📷 이 순간 사진이 있다면 첨부해보세요!
-            </Text>
-          </Card>
-        )}
-      </ScrollView>
-
-      <View style={styles.composer}>
-        {pending && (
-          <View style={styles.pendingRow}>
-            <View>
-              <Image source={{ uri: pending.preview }} style={styles.pendingImg} />
-              <Pressable
-                onPress={() => setPending(null)}
-                style={styles.pendingRemove}
-                hitSlop={6}
-              >
-                <Text style={styles.pendingRemoveX}>×</Text>
-              </Pressable>
-            </View>
-            <Text style={[styles.muted, { flex: 1, fontSize: 13 }]}>
-              사진에 곁들일 설명을 적고 함께 보내보세요.
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.inputRow}>
-          <Pressable
-            onPress={onPickPhoto}
-            disabled={uploading}
-            style={[styles.iconBtn, signals.photo && styles.iconBtnHighlighted]}
-          >
-            <Text style={{ fontSize: 18 }}>📎</Text>
-          </Pressable>
-          <TextInput
-            ref={inputRef}
-            style={styles.textInput}
-            placeholder={
-              pending ? '사진에 곁들일 말을 적어보세요…' : '메시지를 입력하세요…'
-            }
-            placeholderTextColor={colors.muted}
-            defaultValue=""
-            onChangeText={(t) => {
-              inputTextRef.current = t;
-            }}
-            multiline
-          />
-          <Button
-            label={uploading ? '…' : '보내기'}
-            variant="primary"
-            onPress={onSend}
-            disabled={busy || uploading}
-          />
-        </View>
-
-        <View style={{ marginTop: 10 }}>
-          <Button
-            label={busyDiary ? '일기 쓰는 중…' : '📖 일기 완성하기'}
-            onPress={finishDiary}
-            loading={busyDiary}
-            highlighted={signals.diary}
-          />
+          {/* 충분히 모았을 때 — 일기로 남기기 카드 */}
           {signals.diary && (
-            <Text style={[styles.muted, { fontSize: 13, marginTop: 6 }]}>
-              AI가 일기를 쓸 준비가 됐다고 제안했어요.
-            </Text>
+            <View style={styles.enough}>
+              <Text style={styles.enoughTxt}>
+                오늘 이야기, 이대로 일기로 남겨줄까?
+              </Text>
+              <GradientButton
+                label={busyDiary ? '일기 쓰는 중…' : '일기 만들기'}
+                loading={busyDiary}
+                onPress={finishDiary}
+              />
+            </View>
           )}
+        </ScrollView>
+
+        {/* 입력바 */}
+        <View style={[styles.inputWrap, { paddingBottom: insets.bottom || 14 }]}>
+          {pending && (
+            <View style={styles.pendingRow}>
+              <View>
+                <Image source={{ uri: pending.preview }} style={styles.pendingImg} />
+                <Pressable
+                  onPress={() => setPending(null)}
+                  style={styles.pendingRemove}
+                  hitSlop={6}
+                >
+                  <Text style={styles.pendingRemoveX}>×</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.pendingHint}>
+                사진에 곁들일 설명을 적고 함께 보내보세요.
+              </Text>
+            </View>
+          )}
+          <View style={styles.ciRow}>
+            <Pressable
+              onPress={onPickPhoto}
+              disabled={uploading}
+              style={[styles.ciAdd, signals.photo && styles.ciAddHi]}
+            >
+              <Text style={styles.ciAddTxt}>＋</Text>
+            </Pressable>
+            <TextInput
+              ref={inputRef}
+              style={styles.ciField}
+              placeholder={pending ? '사진에 곁들일 말…' : '메시지 입력…'}
+              placeholderTextColor={colors.muted}
+              defaultValue=""
+              onChangeText={(t) => {
+                inputTextRef.current = t;
+              }}
+              multiline
+            />
+            <Pressable
+              onPress={onSend}
+              disabled={busy || uploading}
+              style={[styles.ciSend, (busy || uploading) && styles.ciSendOff]}
+            >
+              {uploading ? (
+                <ActivityIndicator size="small" color={colors.onLav} />
+              ) : (
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M22 2 11 13"
+                    stroke={colors.onLav}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Path
+                    d="M22 2 15 22l-4-9-9-4 20-7z"
+                    stroke={colors.onLav}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              )}
+            </Pressable>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </NightBackground>
   );
 }
 
 function ThinkingBubble({ streaming }: { streaming: boolean }) {
   return (
-    <View style={[styles.bubble, styles.bubbleAssistant, styles.thinking]}>
-      <Text style={styles.muted}>
-        {streaming ? 'AI가 답하는 중' : 'AI가 생각 중'}
-      </Text>
-      <ActivityIndicator size="small" color={colors.accent} />
+    <View style={styles.msgAi}>
+      <MoonAvatar />
+      <View style={[styles.bubble, styles.bubbleAi, styles.thinking]}>
+        <Text style={styles.bubbleAiTxt}>
+          {streaming ? 'AI가 답하는 중' : 'AI가 생각 중'}
+        </Text>
+        <ActivityIndicator size="small" color={colors.lav} />
+      </View>
     </View>
   );
 }
@@ -300,99 +369,140 @@ function MessageBubble({ message }: { message: UIMessage }) {
     .map((p: any) => p.data?.url as string | undefined)
     .filter((u): u is string => !!u);
   if (!text && photos.length === 0) return null;
+
   return (
-    <View
-      style={[
-        styles.bubble,
-        isUser ? styles.bubbleUser : styles.bubbleAssistant,
-      ]}
-    >
-      {photos.map((url, i) => (
-        <Image
-          key={i}
-          source={{ uri: absoluteUrl(url) }}
-          style={[
-            styles.bubbleImg,
-            { marginBottom: text || i < photos.length - 1 ? 8 : 0 },
-          ]}
-        />
-      ))}
-      {!!text && (
-        <Text style={isUser ? styles.bubbleTextUser : styles.bubbleText}>
-          {text}
-        </Text>
-      )}
+    <View style={isUser ? styles.msgMe : styles.msgAi}>
+      {!isUser && <MoonAvatar />}
+      <View style={[styles.bubble, isUser ? styles.bubbleMe : styles.bubbleAi]}>
+        {photos.map((url, i) => (
+          <Image
+            key={i}
+            source={{ uri: absoluteUrl(url) }}
+            style={[
+              styles.bubbleImg,
+              { marginBottom: text || i < photos.length - 1 ? 8 : 0 },
+            ]}
+          />
+        ))}
+        {!!text && (
+          <Text style={isUser ? styles.bubbleMeTxt : styles.bubbleAiTxt}>
+            {text}
+          </Text>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bg,
-  },
-  muted: { color: colors.muted },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing.lg },
-  headerRow: {
+  flex: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // 상단바
+  top: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 11,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  weather: { fontSize: 12, color: colors.muted },
-  bubble: {
-    maxWidth: '85%',
+  ctInfo: { flex: 1, minWidth: 0 },
+  ctTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ctTitle: { fontSize: 14.5, fontWeight: '800', color: '#f0ecfb', letterSpacing: -0.3, flexShrink: 1 },
+  fmtBadge: {
+    backgroundColor: colors.lavSoft,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  fmtBadgeTxt: { fontSize: 10.5, fontWeight: '700', color: colors.lav2 },
+  ctSub: { fontSize: 11.5, color: colors.muted, marginTop: 2 },
+  chatMake: {
+    flexShrink: 0,
     borderWidth: 1,
-    borderRadius: radius.bubble,
-    paddingVertical: 9,
+    borderColor: colors.border2,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 11,
+    paddingVertical: 8,
     paddingHorizontal: 13,
   },
-  bubbleUser: {
-    alignSelf: 'flex-end',
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+  chatMakeTxt: { fontSize: 12, fontWeight: '700', color: colors.lav2 },
+
+  // 본문
+  body: { padding: 16, paddingBottom: 20, gap: 11 },
+  dayDiv: { alignSelf: 'center' },
+  dayDivTxt: {
+    fontSize: 11,
+    color: colors.muted,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    overflow: 'hidden',
   },
-  bubbleAssistant: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.white,
+
+  msgAi: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, maxWidth: '84%', alignSelf: 'flex-start' },
+  msgMe: { alignSelf: 'flex-end', maxWidth: '84%' },
+  aiAva: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: '#9a8cd8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubble: { paddingVertical: 11, paddingHorizontal: 14, borderRadius: 18 },
+  bubbleAi: {
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    borderWidth: 1,
     borderColor: colors.border,
+    borderBottomLeftRadius: 6,
   },
-  bubbleText: { color: colors.text, fontSize: 15, lineHeight: 22 },
-  bubbleTextUser: { color: colors.white, fontSize: 15, lineHeight: 22 },
-  bubbleImg: { width: 220, height: 220, borderRadius: 10, resizeMode: 'cover' },
+  bubbleMe: { backgroundColor: colors.lav2, borderBottomRightRadius: 6 },
+  bubbleAiTxt: { color: '#ece8fa', fontSize: 14.5, lineHeight: 22 },
+  bubbleMeTxt: { color: colors.onLav, fontSize: 14.5, lineHeight: 22, fontWeight: '500' },
+  bubbleImg: { width: 200, height: 150, borderRadius: 12, resizeMode: 'cover' },
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+
   errorBubble: {
     alignSelf: 'flex-start',
-    maxWidth: '85%',
+    maxWidth: '84%',
     backgroundColor: colors.dangerBg,
     borderWidth: 1,
     borderColor: colors.dangerBorder,
-    borderRadius: radius.bubble,
+    borderRadius: 18,
     paddingVertical: 9,
     paddingHorizontal: 13,
   },
   errorText: { color: colors.danger, fontSize: 14 },
-  photoHint: {
-    marginTop: spacing.md,
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
+
+  enough: {
+    alignSelf: 'stretch',
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: 'rgba(169,156,242,0.16)',
+    borderWidth: 1,
+    borderColor: colors.border2,
+    gap: 11,
   },
-  composer: {
+  enoughTxt: { fontSize: 13.5, color: '#ece8fa', lineHeight: 20, fontWeight: '600' },
+
+  // 입력바
+  inputWrap: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: colors.bg,
-    padding: spacing.md,
+    backgroundColor: 'rgba(20,16,30,0.6)',
   },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   pendingImg: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border2,
   },
   pendingRemove: {
     position: 'absolute',
@@ -401,35 +511,46 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#333',
+    backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pendingRemoveX: { color: colors.white, fontSize: 16, lineHeight: 18 },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
-  iconBtn: {
+  pendingRemoveX: { color: '#fff', fontSize: 16, lineHeight: 18 },
+  pendingHint: { flex: 1, fontSize: 13, color: colors.textSoft },
+  ciRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 9 },
+  ciAdd: {
     width: 44,
     height: 44,
-    borderRadius: radius.control,
+    borderRadius: 13,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+    borderColor: colors.border2,
+    backgroundColor: colors.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconBtnHighlighted: { borderColor: colors.accent },
-  textInput: {
+  ciAddHi: { borderColor: colors.lav },
+  ciAddTxt: { fontSize: 22, color: colors.textSoft },
+  ciField: {
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-    borderRadius: radius.control,
-    paddingHorizontal: 12,
-    paddingTop: 11,
-    paddingBottom: 11,
-    fontSize: 15,
+    borderColor: colors.border2,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 15,
+    paddingTop: 12,
+    paddingBottom: 12,
+    fontSize: 14,
     color: colors.text,
   },
+  ciSend: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.lav2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ciSendOff: { opacity: 0.5 },
 });

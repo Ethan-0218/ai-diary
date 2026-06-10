@@ -71,11 +71,7 @@ function RootNavigator() {
         <>
           <RootStack.Screen name="Main" component={MainTabs} />
           <RootStack.Screen name="NotebookDetail" component={NotebookDetailScreen} />
-          <RootStack.Screen
-            name="Chat"
-            component={ChatScreen}
-            options={{ headerShown: true, title: '오늘 이야기' }}
-          />
+          <RootStack.Screen name="Chat" component={ChatScreen} />
           <RootStack.Screen name="Diary" component={DiaryScreen} />
         </>
       )}
