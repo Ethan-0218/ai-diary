@@ -99,14 +99,6 @@ export function Card({
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Badge({ children }: { children: ReactNode }) {
-  return (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>{children}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   btn: {
     flexDirection: 'row',
@@ -138,14 +130,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: 16,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius.pill,
-    paddingVertical: 2,
-    paddingHorizontal: 10,
-  },
-  badgeText: { color: colors.accent, fontSize: 12, fontWeight: '600' },
   errorState: { alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   errorStateFill: { flex: 1, backgroundColor: colors.bg },
   errorIcon: { fontSize: 28, marginBottom: 8 },

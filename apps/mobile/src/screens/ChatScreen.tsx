@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   ctInfo: { flex: 1, minWidth: 0 },
   ctTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ctTitle: { fontSize: 14.5, fontWeight: '800', color: '#f0ecfb', letterSpacing: -0.3, flexShrink: 1 },
+  ctTitle: { fontSize: 14.5, fontWeight: '800', color: colors.text, letterSpacing: -0.3, flexShrink: 1 },
   fmtBadge: {
     backgroundColor: colors.lavSoft,
     borderRadius: 999,
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 6,
   },
   bubbleMe: { backgroundColor: colors.lav2, borderBottomRightRadius: 6 },
-  bubbleAiTxt: { color: '#ece8fa', fontSize: 14.5, lineHeight: 22 },
+  bubbleAiTxt: { color: colors.text, fontSize: 14.5, lineHeight: 22 },
   bubbleMeTxt: { color: colors.onLav, fontSize: 14.5, lineHeight: 22, fontWeight: '500' },
   bubbleImg: { width: 200, height: 150, borderRadius: 12, resizeMode: 'cover' },
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border2,
     gap: 11,
   },
-  enoughTxt: { fontSize: 13.5, color: '#ece8fa', lineHeight: 20, fontWeight: '600' },
+  enoughTxt: { fontSize: 13.5, color: colors.text, lineHeight: 20, fontWeight: '600' },
 
   // 입력바
   inputWrap: {

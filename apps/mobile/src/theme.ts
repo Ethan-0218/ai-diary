@@ -9,9 +9,10 @@
  */
 export const colors = {
   // 텍스트
-  text: '#F2F0FA',
-  textSoft: '#A7A1C2',
-  muted: '#6E6986',
+  heading: '#F4F0FF', // 제목·강조(가장 밝은 흰보라)
+  text: '#F2F0FA', // 본문
+  textSoft: '#A7A1C2', // 부제·보조
+  muted: '#6E6986', // 캡션·placeholder
 
   // 라벤더(브랜드 액센트)
   lav: '#A99CF2',
@@ -67,6 +68,31 @@ export const spacing = {
   lg: 16,
   xl: 24,
 };
+
+/**
+ * 타이포 스케일 — 크기·굵기·자간만(색은 colors와 조합).
+ * 사용: style={[type.h2, { color: colors.heading }]}
+ */
+export const type = {
+  /** 홈 날짜 등 가장 큰 디스플레이 */
+  display: { fontSize: 30, fontWeight: '800', letterSpacing: -0.6 },
+  /** 화면 제목 */
+  h1: { fontSize: 27, fontWeight: '800', letterSpacing: -0.5 },
+  /** 카드/섹션 큰 제목 */
+  h2: { fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
+  /** 카드 제목·항목 제목 */
+  title: { fontSize: 16, fontWeight: '700' },
+  /** 강조 본문(히어로 메시지 등) */
+  bodyLg: { fontSize: 16.5, lineHeight: 25, fontWeight: '500' },
+  /** 기본 본문 */
+  body: { fontSize: 15, lineHeight: 22 },
+  /** 부제·메타 */
+  sub: { fontSize: 13 },
+  /** 캡션 */
+  caption: { fontSize: 12 },
+  /** 섹션 라벨·버튼 라벨 */
+  label: { fontSize: 13, fontWeight: '700' },
+} as const;
 
 /** 그라데이션 헬퍼 — LinearGradient colors prop에 전달. */
 export const gradients = {

@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 27,
     fontWeight: '800',
-    color: '#f4f0ff',
+    color: colors.heading,
     letterSpacing: -0.5,
     marginBottom: spacing.lg,
   },
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border2,
   },
-  name: { fontSize: 18, fontWeight: '700', color: '#f0ecfb' },
+  name: { fontSize: 18, fontWeight: '700', color: colors.text },
   email: { fontSize: 13, color: colors.textSoft, marginTop: 3 },
   logout: {
     marginTop: spacing.xl,

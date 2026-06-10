@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   dateBig: {
     fontSize: 30,
     fontWeight: '800',
-    color: '#f4f0ff',
+    color: colors.heading,
     letterSpacing: -0.6,
   },
   dateSub: { fontSize: 13.5, color: colors.textSoft, marginTop: 4 },
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   greetMsg: {
     fontSize: 16.5,
     lineHeight: 25,
-    color: '#f0ecfb',
+    color: colors.text,
     fontWeight: '500',
     marginBottom: 16,
   },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyEmojiTxt: { fontSize: 26, color: colors.lav2, fontWeight: '700' },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: '#f0ecfb', marginBottom: 9 },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 9 },
   emptyDesc: {
     fontSize: 13,
     lineHeight: 21,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   todayTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#f4f0ff',
+    color: colors.heading,
     letterSpacing: -0.4,
     marginBottom: 8,
   },
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
 
   // zones
   zoneLabel: { marginTop: spacing.lg, marginBottom: spacing.md },
-  zoneTitle: { fontSize: 14, fontWeight: '800', color: '#e7e1f5', letterSpacing: -0.3 },
+  zoneTitle: { fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   zlSub: { fontSize: 11.5, fontWeight: '500', color: colors.muted, marginTop: 3 },
 
   // rows
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowInfo: { flex: 1, minWidth: 0 },
-  rowTitle: { fontSize: 14, fontWeight: '700', color: '#ece8fa' },
+  rowTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
   rowSub: { fontSize: 12, color: colors.textSoft, marginTop: 3 },
   rowGo: { fontSize: 18, color: colors.lav2 },
   softMeta: { fontSize: 11, color: colors.muted, fontWeight: '600', marginTop: 6 },
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addIcoTxt: { fontSize: 21, color: colors.lav2, fontWeight: '700' },
-  addT: { fontSize: 14, fontWeight: '700', color: '#e2dcf4', marginBottom: 2 },
+  addT: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 2 },
   addS: { fontSize: 11.5, color: colors.muted },
 
   shelfLink: {

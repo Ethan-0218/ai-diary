@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 21,
     fontWeight: '800',
-    color: '#f4f0ff',
+    color: colors.heading,
     letterSpacing: -0.4,
     lineHeight: 27,
   },
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   calHead: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#efeafe',
+    color: colors.heading,
     paddingHorizontal: 6,
     marginBottom: 12,
   },

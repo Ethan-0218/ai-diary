@@ -41,9 +41,9 @@ function formatDate(iso: string): string {
 /** format별 종이 타이포(react-native-markdown-display 스타일). */
 function markdownStyle(format: DiaryFormat, imgWidth: number) {
   const base: Record<string, any> = {
-    body: { color: '#dad3ee', fontSize: 16, lineHeight: 30, letterSpacing: 0.1 },
+    body: { color: colors.text, fontSize: 16, lineHeight: 30, letterSpacing: 0.1 },
     heading1: {
-      color: '#f4f0ff',
+      color: colors.heading,
       fontSize: 24,
       fontWeight: '800',
       lineHeight: 32,
@@ -51,7 +51,7 @@ function markdownStyle(format: DiaryFormat, imgWidth: number) {
       letterSpacing: -0.4,
     },
     heading2: {
-      color: '#f1ecff',
+      color: colors.heading,
       fontSize: 19,
       fontWeight: '700',
       marginTop: 12,
@@ -59,7 +59,7 @@ function markdownStyle(format: DiaryFormat, imgWidth: number) {
     },
     paragraph: { marginTop: 0, marginBottom: 16 },
     strong: { color: '#f0ecff', fontWeight: '700' },
-    em: { color: '#cfc8e6', fontStyle: 'italic' },
+    em: { color: colors.textSoft, fontStyle: 'italic' },
     bullet_list: { marginBottom: 12 },
     blockquote: {
       backgroundColor: 'rgba(169,156,242,0.12)',
@@ -87,7 +87,7 @@ function markdownStyle(format: DiaryFormat, imgWidth: number) {
   if (format === 'newspaper') {
     return {
       ...base,
-      body: { ...base.body, lineHeight: 29, color: '#cfc8e6' },
+      body: { ...base.body, lineHeight: 29, color: colors.textSoft },
       heading1: { ...base.heading1, fontSize: 22, lineHeight: 30 },
     };
   }
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     paddingBottom: 9,
     marginBottom: 15,
   },
-  mastheadName: { fontWeight: '800', fontSize: 15, color: '#f1ecff', letterSpacing: 0.3 },
+  mastheadName: { fontWeight: '800', fontSize: 15, color: colors.heading, letterSpacing: 0.3 },
   mastheadDate: { fontSize: 10, color: colors.muted },
   empty: { color: colors.muted, fontSize: 15 },
 
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#cdc6e6',
+    color: colors.text,
     marginBottom: spacing.sm,
   },
   attachRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },

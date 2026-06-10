@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 27,
     fontWeight: '800',
-    color: '#f4f0ff',
+    color: colors.heading,
     letterSpacing: -0.5,
     marginTop: 4,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
-  sectionTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: '#cdc6e6' },
+  sectionTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.text },
   sectionCount: { fontSize: 11.5, color: colors.muted, fontWeight: '600' },
 
   carousel: { gap: CARD_GAP, paddingVertical: 4, paddingRight: spacing.lg },
