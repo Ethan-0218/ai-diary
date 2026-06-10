@@ -253,6 +253,11 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                   </View>
                 </Pressable>
               ))}
+              <AddRow
+                title="매일 쓰는 일기장 더 들이기"
+                sub="달·연 단위 연대기 일기장"
+                onPress={() => navigation.navigate('Store')}
+              />
             </View>
           </>
         )}
@@ -269,7 +274,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                 <SoftRow
                   key={sc.notebook.id}
                   item={sc}
-                  busy={false}
+                  onResume={() => openNotebook(sc.notebook)}
                   onPress={() =>
                     navigation.navigate('NotebookDetail', {
                       notebookId: sc.notebook.id,
@@ -277,6 +282,11 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                   }
                 />
               ))}
+              <AddRow
+                title="테마 일기장 들이기"
+                sub="30일 챌린지·여행 기록 같은 컬렉션"
+                onPress={() => navigation.navigate('Store')}
+              />
             </View>
           </>
         )}
@@ -323,12 +333,12 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
 
 function SoftRow({
   item,
-  busy,
   onPress,
+  onResume,
 }: {
   item: HomeSoftNotebook;
-  busy: boolean;
   onPress: () => void;
+  onResume: () => void;
 }) {
   const { filledCount, slotCount } = item.notebook;
   return (
@@ -346,7 +356,35 @@ function SoftRow({
             {filledCount} / {slotCount}칸 · 다 채우면 한 권
           </Text>
         </View>
-        <Text style={styles.rowGo}>{busy ? '…' : '›'}</Text>
+        <Pressable style={styles.srCta} onPress={onResume} hitSlop={6}>
+          <Text style={styles.srCtaTxt}>이어쓰기</Text>
+        </Pressable>
+      </View>
+    </Pressable>
+  );
+}
+
+/** firm/soft 존 끝의 '더 들이기' 점선 카드. */
+function AddRow({
+  title,
+  sub,
+  onPress,
+}: {
+  title: string;
+  sub: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      <View style={styles.addRow}>
+        <View style={styles.addIco}>
+          <Text style={styles.addIcoTxt}>＋</Text>
+        </View>
+        <View style={styles.rowInfo}>
+          <Text style={styles.addT}>{title}</Text>
+          <Text style={styles.addS}>{sub}</Text>
+        </View>
+        <Text style={styles.rowGo}>›</Text>
       </View>
     </Pressable>
   );
@@ -469,6 +507,42 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 12, color: colors.textSoft, marginTop: 3 },
   rowGo: { fontSize: 18, color: colors.lav2 },
   softMeta: { fontSize: 11, color: colors.muted, fontWeight: '600', marginTop: 6 },
+  srCta: {
+    flexShrink: 0,
+    borderWidth: 1,
+    borderColor: colors.border2,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 11,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+  },
+  srCtaTxt: { color: colors.lav2, fontWeight: '700', fontSize: 12.5 },
+
+  // 더 들이기 점선 카드
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: colors.border2,
+    borderStyle: 'dashed',
+  },
+  addIco: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: colors.lavSoft,
+    borderWidth: 1,
+    borderColor: colors.border2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addIcoTxt: { fontSize: 21, color: colors.lav2, fontWeight: '700' },
+  addT: { fontSize: 14, fontWeight: '700', color: '#e2dcf4', marginBottom: 2 },
+  addS: { fontSize: 11.5, color: colors.muted },
 
   shelfLink: {
     textAlign: 'center',
