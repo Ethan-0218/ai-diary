@@ -131,7 +131,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
     return (
       <>
         {/* 선인사 히어로 */}
-        <GlassCard strong radius={22}>
+        <GlassCard strong lavender radius={22}>
           <View style={styles.greetIcon}>
             <Svg viewBox="0 0 24 24" width={21} height={21}>
               <Path

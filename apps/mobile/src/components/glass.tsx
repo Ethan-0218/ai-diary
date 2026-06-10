@@ -62,13 +62,16 @@ export function GlassCard({
   children,
   style,
   strong,
+  lavender,
   radius = 18,
   contentStyle,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** 라벤더 틴트·보더를 한 단계 진하게(히어로/강조 카드). */
+  /** 보더를 한 단계 진하게(강조 카드). */
   strong?: boolean;
+  /** 라벤더 틴트(135deg, 프로토타입 greet-hero). 미지정 시 중립 흰빛 반사. */
+  lavender?: boolean;
   radius?: number;
   /** 내부 패딩 등 콘텐츠 래퍼 스타일. */
   contentStyle?: StyleProp<ViewStyle>;
@@ -104,19 +107,25 @@ export function GlassCard({
             pointerEvents="none"
           >
             <Defs>
-              {/* 표면 반사 — strong은 라벤더 틴트(좌상 진→우하 옅), 일반은 중립 흰빛 */}
+              {/* 표면 — lavender는 프로토타입 greet-hero 그라데이션
+                  linear-gradient(135deg, rgba(169,156,242,.26), rgba(120,108,200,.07)).
+                  135deg = 좌상→우하(x1,y1=0 → x2,y2=1). 일반은 중립 흰빛 반사. */}
               <SvgLinearGradient id={`${id}s`} x1="0" y1="0" x2="1" y2="1">
-                <Stop
-                  offset="0"
-                  stopColor={strong ? '#b3a7f2' : '#ffffff'}
-                  stopOpacity={strong ? 0.26 : 0.13}
-                />
-                <Stop
-                  offset="0.55"
-                  stopColor={strong ? '#a99cf2' : '#ffffff'}
-                  stopOpacity={strong ? 0.1 : 0.02}
-                />
-                <Stop offset="1" stopColor="#a99cf2" stopOpacity={0.05} />
+                {lavender
+                  ? [
+                      <Stop key="a" offset="0" stopColor="#a99cf2" stopOpacity="0.26" />,
+                      <Stop key="b" offset="1" stopColor="#786cc8" stopOpacity="0.07" />,
+                    ]
+                  : [
+                      <Stop
+                        key="a"
+                        offset="0"
+                        stopColor="#ffffff"
+                        stopOpacity={strong ? 0.1 : 0.07}
+                      />,
+                      <Stop key="b" offset="0.5" stopColor="#ffffff" stopOpacity="0.015" />,
+                      <Stop key="c" offset="1" stopColor="#ffffff" stopOpacity="0" />,
+                    ]}
               </SvgLinearGradient>
               {/* 상단 하이라이트 — 위쪽 빛 모서리 */}
               <SvgLinearGradient id={`${id}h`} x1="0" y1="0" x2="0" y2="1">
