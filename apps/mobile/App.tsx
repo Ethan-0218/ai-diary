@@ -9,19 +9,40 @@ import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
-import type { RootStackParamList } from './src/navigation/types';
+import type {
+  RootStackParamList,
+  RootTabParamList,
+} from './src/navigation/types';
 import { colors } from './src/theme';
+import { GlassTabBar } from './src/components/GlassTabBar';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ShelfScreen } from './src/screens/ShelfScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { NotebookDetailScreen } from './src/screens/NotebookDetailScreen';
 import { StoreScreen } from './src/screens/StoreScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { DiaryScreen } from './src/screens/DiaryScreen';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<RootTabParamList>();
+
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <GlassTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Shelf" component={ShelfScreen} />
+      <Tab.Screen name="Store" component={StoreScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
 
 function RootNavigator() {
   const { status } = useAuth();
@@ -35,55 +56,30 @@ function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator
+    <RootStack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
+        headerShown: false,
       }}
     >
       {status === 'guest' ? (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+        <RootStack.Screen name="Login" component={LoginScreen} />
       ) : (
         <>
-          <Stack.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{ title: 'AI 일기' }}
-          />
-          <Stack.Screen
-            name="Shelf"
-            component={ShelfScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="NotebookDetail"
-            component={NotebookDetailScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Store"
-            component={StoreScreen}
-            options={{ title: '일기장 스토어' }}
-          />
-          <Stack.Screen
+          <RootStack.Screen name="Main" component={MainTabs} />
+          <RootStack.Screen name="NotebookDetail" component={NotebookDetailScreen} />
+          <RootStack.Screen
             name="Chat"
             component={ChatScreen}
-            options={{ title: '오늘 이야기' }}
+            options={{ headerShown: true, title: '오늘 이야기' }}
           />
-          <Stack.Screen
-            name="Diary"
-            component={DiaryScreen}
-            options={{ headerShown: false }}
-          />
+          <RootStack.Screen name="Diary" component={DiaryScreen} />
         </>
       )}
-    </Stack.Navigator>
+    </RootStack.Navigator>
   );
 }
 

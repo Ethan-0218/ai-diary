@@ -13,9 +13,9 @@ import {
 import { toUserMessage } from '../lib/errors';
 import { Button, Card, ErrorState } from '../components/ui';
 import { colors, spacing } from '../theme';
-import type { RootScreenProps } from '../navigation/types';
+import type { TabScreenProps } from '../navigation/types';
 
-export function StoreScreen({ navigation }: RootScreenProps<'Store'>) {
+export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [prices, setPrices] = useState<Record<string, IapProduct>>({});
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export function StoreScreen({ navigation }: RootScreenProps<'Store'>) {
       await api.verifyPurchase(purchase.purchaseToken ?? '');
       await finishIapPurchase(purchase);
       Alert.alert('구매 완료', `'${card.title}' 일기장이 책장에 꽂혔어요.`, [
-        { text: '확인', onPress: () => navigation.goBack() },
+        { text: '확인', onPress: () => navigation.navigate('Shelf') },
       ]);
     } catch (e: any) {
       // 사용자가 결제 시트를 닫은 경우는 조용히 넘어간다.
@@ -119,7 +119,7 @@ export function StoreScreen({ navigation }: RootScreenProps<'Store'>) {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: 80 },
+  content: { padding: spacing.lg, paddingBottom: 110 },
   lead: { color: colors.muted, fontSize: 15, marginBottom: spacing.lg },
   muted: { color: colors.muted },
   title: { fontSize: 17, fontWeight: '700', color: colors.text },

@@ -15,13 +15,13 @@ import { ErrorState } from '../components/ui';
 import { NightBackground, ProgressBar, Spine } from '../components/glass';
 import { Book3D } from '../components/Book3D';
 import { colors, spacing } from '../theme';
-import type { RootScreenProps } from '../navigation/types';
+import type { TabScreenProps } from '../navigation/types';
 
 /** 진행중 캐러셀 카드 폭 + 간격(스냅 간격 계산에 사용) */
 const CARD_W = 150;
 const CARD_GAP = 14;
 
-export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
+export function ShelfScreen({ navigation }: TabScreenProps<'Shelf'>) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [notebooks, setNotebooks] = useState<NotebookDto[]>([]);
@@ -63,12 +63,6 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
           { paddingTop: insets.top + spacing.sm },
         ]}
       >
-        {/* 상단 back + 헤더 */}
-        <View style={styles.top}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={8} style={styles.back}>
-            <Text style={styles.backTxt}>‹</Text>
-          </Pressable>
-        </View>
         <Text style={styles.greet}>차오르는 나의 서재</Text>
         <Text style={styles.title}>{name}의 서재</Text>
 
@@ -195,7 +189,7 @@ function ShelfRow({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: 60 },
+  content: { padding: spacing.lg, paddingBottom: 110 },
   loading: { color: colors.muted, marginTop: spacing.lg, textAlign: 'center', lineHeight: 22 },
 
   top: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },

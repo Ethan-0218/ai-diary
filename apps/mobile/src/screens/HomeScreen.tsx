@@ -30,7 +30,7 @@ import {
 } from '../components/glass';
 import { Book3D } from '../components/Book3D';
 import { colors, spacing } from '../theme';
-import type { RootScreenProps } from '../navigation/types';
+import type { TabScreenProps } from '../navigation/types';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -61,7 +61,7 @@ function firmSub(f: HomeFirmNotebook): string {
   }
 }
 
-export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
+export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const { signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const [summary, setSummary] = useState<HomeSummaryDto | null>(null);
@@ -291,9 +291,6 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           </>
         )}
 
-        <Pressable onPress={() => navigation.navigate('Shelf')}>
-          <Text style={styles.shelfLink}>내 서재 보기 ›</Text>
-        </Pressable>
       </>
     );
   };
@@ -391,7 +388,7 @@ function AddRow({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: 60, gap: spacing.md },
+  content: { padding: spacing.lg, paddingBottom: 110, gap: spacing.md },
   loading: { color: colors.muted, marginTop: spacing.xl, textAlign: 'center' },
 
   top: {
