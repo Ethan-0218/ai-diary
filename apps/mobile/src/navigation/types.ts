@@ -6,6 +6,7 @@ export type RootStackParamList = {
   Home: undefined;
   Shelf: undefined;
   Store: undefined;
+  NotebookDetail: { notebookId: string };
   Chat: { conversationId: string };
   Diary: { conversationId: string };
 };

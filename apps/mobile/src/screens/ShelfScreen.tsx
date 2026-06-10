@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,9 +7,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DEFAULT_MODEL_ID, type NotebookDto } from '@ai-diary/shared';
+import { type NotebookDto } from '@ai-diary/shared';
 import { api } from '../lib/api';
-import { getCurrentCoords } from '../lib/location';
 import { toUserMessage } from '../lib/errors';
 import { useAuth } from '../auth/AuthContext';
 import { ErrorState } from '../components/ui';
@@ -29,7 +27,6 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
   const [notebooks, setNotebooks] = useState<NotebookDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -46,22 +43,8 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
   );
   useEffect(() => navigation.addListener('focus', load), [navigation, load]);
 
-  const openNotebook = async (nb: NotebookDto) => {
-    setBusy(nb.id);
-    try {
-      const coords = await getCurrentCoords();
-      const conv = await api.createConversation(
-        nb.id,
-        DEFAULT_MODEL_ID,
-        coords ?? undefined,
-      );
-      navigation.navigate('Chat', { conversationId: conv.id });
-    } catch (e: any) {
-      Alert.alert('열기 실패', toUserMessage(e));
-    } finally {
-      setBusy(null);
-    }
-  };
+  const openDetail = (nb: NotebookDto) =>
+    navigation.navigate('NotebookDetail', { notebookId: nb.id });
 
   const active = notebooks.filter((n) => n.status === 'active');
   const chronicle = notebooks.filter(
@@ -112,8 +95,7 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
                 <Pressable
                   key={nb.id}
                   style={styles.cell}
-                  onPress={() => openNotebook(nb)}
-                  disabled={busy !== null}
+                  onPress={() => openDetail(nb)}
                 >
                   <Book3D format={nb.format} title={nb.title} width={CARD_W} />
                   <View style={styles.miniProg}>
@@ -126,7 +108,7 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
                       {nb.title}
                     </Text>
                     <Text style={styles.cellCount}>
-                      {busy === nb.id ? '…' : `${nb.filledCount}/${nb.slotCount}`}
+                      {nb.filledCount}/{nb.slotCount}
                     </Text>
                   </View>
                 </Pressable>
@@ -153,6 +135,7 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
                     format={nb.format}
                     title={nb.title}
                     caption={`${nb.filledCount}편`}
+                    onPress={() => openDetail(nb)}
                   />
                 ))}
               </ShelfRow>
@@ -167,6 +150,7 @@ export function ShelfScreen({ navigation }: RootScreenProps<'Shelf'>) {
                     format={nb.format}
                     title={nb.title}
                     caption={`${nb.slotCount}칸`}
+                    onPress={() => openDetail(nb)}
                   />
                 ))}
               </ShelfRow>

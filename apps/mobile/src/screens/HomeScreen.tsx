@@ -224,7 +224,9 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                 <Pressable
                   key={f.notebook.id}
                   onPress={() =>
-                    openNotebook(f.notebook, f.todayConversationId, f.todaySlotState)
+                    navigation.navigate('NotebookDetail', {
+                      notebookId: f.notebook.id,
+                    })
                   }
                 >
                   <View style={styles.row}>
@@ -239,9 +241,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                       </Text>
                       <Text style={styles.rowSub}>{firmSub(f)}</Text>
                     </View>
-                    <Text style={styles.rowGo}>
-                      {busy === f.notebook.id ? '…' : '›'}
-                    </Text>
+                    <Text style={styles.rowGo}>›</Text>
                   </View>
                 </Pressable>
               ))}
@@ -261,8 +261,12 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                 <SoftRow
                   key={sc.notebook.id}
                   item={sc}
-                  busy={busy === sc.notebook.id}
-                  onPress={() => openNotebook(sc.notebook)}
+                  busy={false}
+                  onPress={() =>
+                    navigation.navigate('NotebookDetail', {
+                      notebookId: sc.notebook.id,
+                    })
+                  }
                 />
               ))}
             </View>

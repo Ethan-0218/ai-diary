@@ -16,6 +16,7 @@ import { colors } from './src/theme';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ShelfScreen } from './src/screens/ShelfScreen';
+import { NotebookDetailScreen } from './src/screens/NotebookDetailScreen';
 import { StoreScreen } from './src/screens/StoreScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { DiaryScreen } from './src/screens/DiaryScreen';
@@ -58,6 +59,11 @@ function RootNavigator() {
           <Stack.Screen
             name="Shelf"
             component={ShelfScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="NotebookDetail"
+            component={NotebookDetailScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
