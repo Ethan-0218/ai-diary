@@ -220,8 +220,8 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           </GlassCard>
         )}
 
-        {/* firm 존 — 연대기(능동) */}
-        {s.firm.length > 0 && (
+        {/* firm 존 — 연대기(능동). 일기장이 없어도 '더 들이기' 진입은 보인다(s0 제외). */}
+        {s.state !== 's0' && (
           <>
             <View style={styles.zoneLabel}>
               <Text style={styles.zoneTitle}>오늘의 일기장</Text>
@@ -262,8 +262,8 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           </>
         )}
 
-        {/* soft 존 — 컬렉션(가볍게) */}
-        {s.soft.length > 0 && (
+        {/* soft 존 — 컬렉션(가볍게). 일기장이 없어도 '테마 들이기' 진입은 보인다(s0 제외). */}
+        {s.state !== 's0' && (
           <>
             <View style={styles.zoneLabel}>
               <Text style={styles.zoneTitle}>천천히 모으는 중</Text>
