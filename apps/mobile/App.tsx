@@ -79,7 +79,7 @@ function RootNavigator() {
           <Stack.Screen
             name="Diary"
             component={DiaryScreen}
-            options={{ title: '일기' }}
+            options={{ headerShown: false }}
           />
         </>
       )}
