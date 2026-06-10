@@ -19,7 +19,7 @@ export function ProfileScreen(_props: TabScreenProps<'Profile'>) {
       >
         <Text style={styles.title}>나</Text>
 
-        <GlassCard strong style={styles.card}>
+        <GlassCard strong radius={20} contentStyle={styles.cardRow}>
           <View style={styles.avatar} />
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{user?.name ?? '일기 쓰는 사람'}</Text>
@@ -44,12 +44,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: spacing.lg,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    borderRadius: 20,
-  },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: {
     width: 54,
     height: 54,

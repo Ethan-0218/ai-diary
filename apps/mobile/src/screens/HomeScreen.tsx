@@ -131,7 +131,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
     return (
       <>
         {/* 선인사 히어로 */}
-        <GlassCard strong style={styles.greet}>
+        <GlassCard strong radius={22}>
           <View style={styles.greetIcon}>
             <Svg viewBox="0 0 24 24" width={21} height={21}>
               <Path
@@ -189,7 +189,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
 
         {/* s3 — 오늘 일기(결과물) */}
         {s.state === 's3' && s.todayDiary && (
-          <GlassCard strong style={styles.today}>
+          <GlassCard strong radius={20}>
             <Text style={styles.todayTag}>오늘의 일기 · {formatDate(s.date).big}</Text>
             <Text style={styles.todayTitle}>{s.todayDiary.title}</Text>
             <Text style={styles.todayExcerpt} numberOfLines={3}>

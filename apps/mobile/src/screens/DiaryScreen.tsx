@@ -198,7 +198,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
         </View>
 
         {/* paper-sheet */}
-        <GlassCard strong style={styles.paper}>
+        <GlassCard strong radius={20} contentStyle={styles.paperPad}>
           {detail.format === 'newspaper' && (
             <View style={styles.masthead}>
               <Text style={styles.mastheadName}>취재 수첩</Text>
@@ -234,7 +234,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
 
         {/* 고치기 입력 */}
         {reviseOpen && detail.diary && (
-          <GlassCard style={styles.reviseCard}>
+          <GlassCard radius={16} style={styles.reviseCard}>
             <Text style={styles.cardDesc}>
               고치고 싶은 점을 적으면 그대로 다시 써줘요. 예: “오전→오후 순서로”,
               “좀 더 담백하게”.
@@ -288,7 +288,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
         {showDev && (
           <View style={{ gap: spacing.md }}>
             {costs && (
-              <GlassCard style={styles.devCard}>
+              <GlassCard radius={16}>
                 <Text style={styles.devTitle}>
                   💰 총비용 ${costs.totalUsd.toFixed(5)}
                 </Text>
@@ -299,7 +299,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
               </GlassCard>
             )}
 
-            <GlassCard style={styles.devCard}>
+            <GlassCard radius={16}>
               <Text style={styles.devTitle}>📝 테스트 피드백</Text>
               <TextInput
                 style={[styles.input, styles.textarea]}
@@ -326,7 +326,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
             />
 
             {detail.messages.length > 0 && (
-              <GlassCard style={styles.devCard}>
+              <GlassCard radius={16}>
                 <Text style={styles.devTitle}>
                   💬 실제 대화 ({detail.messages.length})
                 </Text>
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
 
-  paper: { borderRadius: 20, paddingHorizontal: 22, paddingVertical: 24 },
+  paperPad: { paddingHorizontal: 22, paddingVertical: 24 },
   dDate: {
     fontSize: 12,
     color: colors.muted,
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   },
   editTxt: { color: colors.textSoft, fontWeight: '700', fontSize: 14 },
 
-  reviseCard: { marginTop: spacing.md, borderRadius: 16 },
+  reviseCard: { marginTop: spacing.md },
   cardDesc: { color: colors.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 10 },
   input: {
     borderWidth: 1,
@@ -451,7 +451,6 @@ const styles = StyleSheet.create({
 
   devToggle: { marginTop: spacing.xl, paddingVertical: spacing.sm },
   devToggleTxt: { color: colors.muted, fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  devCard: { borderRadius: 16 },
   devTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
   devMeta: { color: colors.muted, fontSize: 13, marginTop: 6, lineHeight: 19 },
   bubble: {

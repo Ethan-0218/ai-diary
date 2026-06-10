@@ -1,4 +1,4 @@
-import React, { useId, type ReactNode } from 'react';
+import React, { useId, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -17,7 +17,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { BlurView } from '@react-native-community/blur';
-import { colors, formatColors, radius, spacing } from '../theme';
+import { colors, formatColors, spacing } from '../theme';
 import type { DiaryFormat } from '@ai-diary/shared';
 
 /**
@@ -53,30 +53,83 @@ export function NightBackground({ children }: { children: ReactNode }) {
   );
 }
 
-/** 글라스 카드 — BlurView로 카드 뒤 배경(라벤더 발광)을 흐려 진짜 글라스모피즘. */
+/**
+ * 글라스 카드 — glassmorphism 4요소: blur + 표면 그라데이션(반사광) +
+ * 상단 하이라이트(빛 모서리) + 발광 그림자(depth).
+ * svg는 onLayout으로 측정한 실제 크기로 그린다(% 크기는 RN svg에서 불안정).
+ */
 export function GlassCard({
   children,
   style,
   strong,
+  radius = 18,
+  contentStyle,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   /** 라벤더 틴트·보더를 한 단계 진하게(히어로/강조 카드). */
   strong?: boolean;
+  radius?: number;
+  /** 내부 패딩 등 콘텐츠 래퍼 스타일. */
+  contentStyle?: StyleProp<ViewStyle>;
 }) {
+  const id = useId();
+  const [size, setSize] = useState({ w: 0, h: 0 });
   return (
-    <View style={[styles.glassWrap, strong && styles.glassWrapStrong, style]}>
-      <BlurView
-        style={StyleSheet.absoluteFill}
-        blurType="dark"
-        blurAmount={14}
-        reducedTransparencyFallbackColor="#16131f"
-      />
+    <View style={[styles.cardShadow, { borderRadius: radius }, style]}>
       <View
-        style={[StyleSheet.absoluteFill, strong ? styles.tintStrong : styles.tint]}
-        pointerEvents="none"
-      />
-      <View style={styles.glassInner}>{children}</View>
+        style={[
+          styles.cardClip,
+          { borderRadius: radius },
+          strong && styles.cardClipStrong,
+        ]}
+        onLayout={(e) =>
+          setSize({
+            w: e.nativeEvent.layout.width,
+            h: e.nativeEvent.layout.height,
+          })
+        }
+      >
+        <BlurView
+          style={StyleSheet.absoluteFill}
+          blurType="dark"
+          blurAmount={18}
+          reducedTransparencyFallbackColor="#16131f"
+        />
+        {size.w > 0 && (
+          <Svg
+            width={size.w}
+            height={size.h}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          >
+            <Defs>
+              {/* 표면 반사 — strong은 라벤더 틴트(좌상 진→우하 옅), 일반은 중립 흰빛 */}
+              <SvgLinearGradient id={`${id}s`} x1="0" y1="0" x2="1" y2="1">
+                <Stop
+                  offset="0"
+                  stopColor={strong ? '#b3a7f2' : '#ffffff'}
+                  stopOpacity={strong ? 0.26 : 0.13}
+                />
+                <Stop
+                  offset="0.55"
+                  stopColor={strong ? '#a99cf2' : '#ffffff'}
+                  stopOpacity={strong ? 0.1 : 0.02}
+                />
+                <Stop offset="1" stopColor="#a99cf2" stopOpacity={0.05} />
+              </SvgLinearGradient>
+              {/* 상단 하이라이트 — 위쪽 빛 모서리 */}
+              <SvgLinearGradient id={`${id}h`} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#ffffff" stopOpacity="0.24" />
+                <Stop offset="0.22" stopColor="#ffffff" stopOpacity="0" />
+              </SvgLinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}s)`} />
+            <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}h)`} />
+          </Svg>
+        )}
+        <View style={[styles.cardPad, contentStyle]}>{children}</View>
+      </View>
     </View>
   );
 }
@@ -208,16 +261,21 @@ export function Spine({
 
 const styles = StyleSheet.create({
   night: { flex: 1, backgroundColor: '#08070d' },
-  glassWrap: {
-    borderRadius: radius.card,
+  cardShadow: {
+    shadowColor: '#7c6bd6',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+  cardClip: {
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  glassWrapStrong: { borderColor: colors.border2 },
-  glassInner: { padding: spacing.lg },
-  tint: { backgroundColor: 'rgba(255,255,255,0.05)' },
-  tintStrong: { backgroundColor: 'rgba(169,156,242,0.12)' },
+  cardClipStrong: { borderColor: colors.border2 },
+  cardPad: { padding: spacing.lg },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
