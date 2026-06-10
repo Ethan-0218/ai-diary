@@ -54,26 +54,38 @@ export function NightBackground({ children }: { children: ReactNode }) {
   );
 }
 
-/** 글라스 뒤로가기 버튼 — 반투명 blur 원 + 큰 chevron(‹). */
+/** 글라스 뒤로가기 버튼 — blur + 상단 하이라이트 + 발광 그림자 + 큰 chevron(‹). */
 export function BackButton({ onPress }: { onPress: () => void }) {
+  const id = useId();
   return (
-    <Pressable onPress={onPress} hitSlop={8} style={styles.backBtn}>
-      <BlurView
-        style={StyleSheet.absoluteFill}
-        blurType="dark"
-        blurAmount={8}
-        reducedTransparencyFallbackColor="#1c182a"
-      />
-      <View style={[StyleSheet.absoluteFill, styles.backTint]} pointerEvents="none" />
-      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M15 5l-7 7 7 7"
-          stroke={colors.text}
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+    <Pressable onPress={onPress} hitSlop={8} style={styles.backShadow}>
+      <View style={styles.backClip}>
+        <BlurView
+          style={StyleSheet.absoluteFill}
+          blurType="dark"
+          blurAmount={8}
+          reducedTransparencyFallbackColor="#1c182a"
         />
-      </Svg>
+        <View style={[StyleSheet.absoluteFill, styles.backTint]} pointerEvents="none" />
+        <Svg width={40} height={40} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Defs>
+            <SvgLinearGradient id={`${id}bh`} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#ffffff" stopOpacity="0.16" />
+              <Stop offset="0.55" stopColor="#ffffff" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={40} height={40} fill={`url(#${id}bh)`} />
+        </Svg>
+        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M15 5l-7 7 7 7"
+            stroke={colors.text}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </View>
     </Pressable>
   );
 }
@@ -295,7 +307,15 @@ export function Spine({
 
 const styles = StyleSheet.create({
   night: { flex: 1, backgroundColor: '#08070d' },
-  backBtn: {
+  backShadow: {
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  backClip: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -305,7 +325,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backTint: { backgroundColor: 'rgba(255,255,255,0.04)' },
+  backTint: { backgroundColor: 'rgba(255,255,255,0.05)' },
   cardShadow: {
     shadowColor: '#7c6bd6',
     shadowOffset: { width: 0, height: 14 },
