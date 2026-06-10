@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import {
   DEFAULT_MODEL_ID,
   type HomeFirmNotebook,
@@ -33,31 +34,18 @@ import type { RootScreenProps } from '../navigation/types';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-function partOfDay(d = new Date()): string {
-  const h = d.getHours();
-  if (h < 5) return '깊은 밤';
-  if (h < 11) return '아침';
-  if (h < 14) return '한낮';
-  if (h < 18) return '오후';
-  if (h < 22) return '저녁';
-  return '늦은 저녁';
-}
-
 function formatDate(dateStr: string): { big: string; sub: string } {
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return {
-    big: `${m}월 ${d}일`,
-    sub: `${WEEKDAYS[date.getDay()]}요일 · ${partOfDay()}`,
-  };
+  return { big: `${m}월 ${d}일`, sub: `${WEEKDAYS[date.getDay()]}요일` };
 }
 
 /** state별 선인사 메시지(친구 톤). 동적 예정기억 훅은 P4에서. */
 const GREET: Record<HomeSummaryDto['state'], string> = {
-  s0: '오늘 하루도 고생했어. 근데 지금 쓰는 일기장이 없네 — 한 권 들일까?',
-  s1: '오늘 하루는 어땠어? 천천히 들려줘.',
-  s2: '아까 하던 얘기, 이어서 들려줄래?',
-  s3: '오늘 얘기 잘 들었어. 일기로 남겨뒀어 — 내일 또 보자 :)',
+  s0: '오늘 하루도 고생 많았어. 지금 쓰는 일기장이 없는데, 새로 하나 시작해볼까?',
+  s1: '오늘 하루는 어땠어? 편하게 들려줘.',
+  s2: '아까 하던 얘기 이어서 들려줘.',
+  s3: '오늘 이야기 잘 들었어. 일기로 잘 남겨뒀어, 내일 또 보자!',
 };
 
 function firmSub(f: HomeFirmNotebook): string {
@@ -145,10 +133,14 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
         {/* 선인사 히어로 */}
         <GlassCard strong style={styles.greet}>
           <View style={styles.greetIcon}>
-            <Text style={styles.greetIconTxt}>✦</Text>
+            <Svg viewBox="0 0 24 24" width={21} height={21}>
+              <Path
+                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                fill="#fbf7ef"
+              />
+            </Svg>
           </View>
-          <Text style={styles.greetFrom}>오늘의 친구 · {partOfDay()}</Text>
-          <Text style={styles.greetMsg}>“{GREET[s.state]}”</Text>
+          <Text style={styles.greetMsg}>{GREET[s.state]}</Text>
           {s.state === 's1' && ctaFirm && (
             <GradientButton
               label="오늘 이야기하기"
@@ -197,28 +189,44 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
 
         {/* s3 — 오늘 일기(결과물) */}
         {s.state === 's3' && s.todayDiary && (
-          <Pressable
-            onPress={() =>
-              navigation.navigate('Diary', {
-                conversationId: s.todayDiary!.conversationId,
-              })
-            }
-          >
-            <GlassCard strong style={styles.today}>
-              <Text style={styles.todayTag}>✦ 오늘 일기 · {formatDate(s.date).big}</Text>
-              <Text style={styles.todayTitle}>{s.todayDiary.title}</Text>
-              <Text style={styles.todayExcerpt} numberOfLines={3}>
-                {s.todayDiary.excerpt}
-              </Text>
-              <Text style={styles.todayRead}>읽기 ›</Text>
-            </GlassCard>
-          </Pressable>
+          <GlassCard strong style={styles.today}>
+            <Text style={styles.todayTag}>오늘의 일기 · {formatDate(s.date).big}</Text>
+            <Text style={styles.todayTitle}>{s.todayDiary.title}</Text>
+            <Text style={styles.todayExcerpt} numberOfLines={3}>
+              {s.todayDiary.excerpt}
+            </Text>
+            <View style={styles.todayActions}>
+              <Pressable
+                style={[styles.tdBtn, styles.tdRead]}
+                onPress={() =>
+                  navigation.navigate('Diary', {
+                    conversationId: s.todayDiary!.conversationId,
+                  })
+                }
+              >
+                <Text style={styles.tdReadTxt}>읽어보기</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.tdBtn, styles.tdAug]}
+                onPress={() =>
+                  navigation.navigate('Chat', {
+                    conversationId: s.todayDiary!.conversationId,
+                  })
+                }
+              >
+                <Text style={styles.tdAugTxt}>더 이야기하기</Text>
+              </Pressable>
+            </View>
+          </GlassCard>
         )}
 
         {/* firm 존 — 연대기(능동) */}
         {s.firm.length > 0 && (
           <>
-            <Text style={styles.zoneLabel}>오늘의 일기장</Text>
+            <View style={styles.zoneLabel}>
+              <Text style={styles.zoneTitle}>오늘의 일기장</Text>
+              <Text style={styles.zlSub}>매일 한 편씩, 오늘을 이어 써요</Text>
+            </View>
             <View style={{ gap: 10 }}>
               {s.firm.map((f) => (
                 <Pressable
@@ -252,9 +260,9 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
         {/* soft 존 — 컬렉션(가볍게) */}
         {s.soft.length > 0 && (
           <>
-            <View style={styles.zoneRow}>
-              <Text style={styles.zoneLabel}>천천히 모으는 중</Text>
-              <Text style={styles.zoneHint}>서두르지 않아도 돼</Text>
+            <View style={styles.zoneLabel}>
+              <Text style={styles.zoneTitle}>천천히 모으는 중</Text>
+              <Text style={styles.zlSub}>칸을 다 채우면 한 권이 완성돼요</Text>
             </View>
             <View style={{ gap: 10 }}>
               {s.soft.map((sc) => (
@@ -274,7 +282,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
         )}
 
         <Pressable onPress={() => navigation.navigate('Shelf')}>
-          <Text style={styles.shelfLink}>지난 일기 · 내 서재 ▸</Text>
+          <Text style={styles.shelfLink}>내 서재 보기 ›</Text>
         </Pressable>
       </>
     );
@@ -431,20 +439,18 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     marginBottom: 8,
   },
-  todayExcerpt: { fontSize: 13.5, lineHeight: 23, color: colors.textSoft, marginBottom: 12 },
-  todayRead: { fontSize: 13.5, fontWeight: '700', color: colors.lav2 },
+  todayExcerpt: { fontSize: 13.5, lineHeight: 23, color: colors.textSoft, marginBottom: 14 },
+  todayActions: { flexDirection: 'row', gap: 9 },
+  tdBtn: { flex: 1, borderRadius: 13, paddingVertical: 12, alignItems: 'center' },
+  tdRead: { backgroundColor: colors.lav2 },
+  tdReadTxt: { color: colors.onLav, fontWeight: '700', fontSize: 13.5 },
+  tdAug: { borderWidth: 1, borderColor: colors.border2 },
+  tdAugTxt: { color: colors.textSoft, fontWeight: '700', fontSize: 13.5 },
 
   // zones
-  zoneRow: { flexDirection: 'row', alignItems: 'center' },
-  zoneLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#cdc6e6',
-    marginTop: spacing.sm,
-    marginBottom: 2,
-  },
-  zoneHint: { fontSize: 11, color: colors.muted, marginTop: spacing.sm },
+  zoneLabel: { marginTop: spacing.lg, marginBottom: spacing.md },
+  zoneTitle: { fontSize: 14, fontWeight: '800', color: '#e7e1f5', letterSpacing: -0.3 },
+  zlSub: { fontSize: 11.5, fontWeight: '500', color: colors.muted, marginTop: 3 },
 
   // rows
   row: {
