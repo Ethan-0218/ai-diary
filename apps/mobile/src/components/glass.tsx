@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backTint: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  backTint: { backgroundColor: 'rgba(255,255,255,0.025)' },
   cardShadow: {
     shadowColor: '#7c6bd6',
     shadowOffset: { width: 0, height: 14 },
