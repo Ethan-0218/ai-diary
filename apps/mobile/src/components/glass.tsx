@@ -38,10 +38,12 @@ export function NightBackground({ children }: { children: ReactNode }) {
         pointerEvents="none"
       >
         <Defs>
-          {/* 프로토타입 body: radial(900x600 at 50% -10%, #2c2746 → transparent 60%) */}
-          <RadialGradient id={`${id}g`} cx="50%" cy="0%" rx="90%" ry="58%">
-            <Stop offset="0" stopColor="#2c2746" stopOpacity="1" />
-            <Stop offset="0.6" stopColor="#2c2746" stopOpacity="0" />
+          {/* 프로토타입 body: radial(900x600 at 50% -10%, #2c2746 → transparent 60%).
+              발광 반경을 화면 폭의 2배 이상으로 키워 상단 ~40%를 덮는다. */}
+          <RadialGradient id={`${id}g`} cx="50%" cy="-8%" rx="210%" ry="80%">
+            <Stop offset="0" stopColor="#3a3360" stopOpacity="1" />
+            <Stop offset="0.35" stopColor="#2c2746" stopOpacity="0.85" />
+            <Stop offset="0.62" stopColor="#2c2746" stopOpacity="0" />
           </RadialGradient>
         </Defs>
         <Rect x="0" y="0" width={width} height={height} fill={`url(#${id}g)`} />
