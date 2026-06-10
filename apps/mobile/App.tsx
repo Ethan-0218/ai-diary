@@ -15,6 +15,7 @@ import type { RootStackParamList } from './src/navigation/types';
 import { colors } from './src/theme';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { ShelfScreen } from './src/screens/ShelfScreen';
 import { StoreScreen } from './src/screens/StoreScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { DiaryScreen } from './src/screens/DiaryScreen';
@@ -53,6 +54,11 @@ function RootNavigator() {
             name="Home"
             component={HomeScreen}
             options={{ title: 'AI 일기' }}
+          />
+          <Stack.Screen
+            name="Shelf"
+            component={ShelfScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Store"

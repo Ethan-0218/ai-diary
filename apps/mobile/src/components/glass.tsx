@@ -181,6 +181,31 @@ export function BookCover({
   );
 }
 
+/** 책장 선반에 꽂힌 책등(정적 — 완성한 서재용, WebView 미사용). */
+export function Spine({
+  format,
+  title,
+  caption,
+  onPress,
+}: {
+  format: DiaryFormat;
+  title: string;
+  caption?: string;
+  onPress?: () => void;
+}) {
+  const { c1, c2 } = formatColors[FORMAT_KEY[format]];
+  return (
+    <Pressable onPress={onPress} style={[styles.spine, { backgroundColor: c1 }]}>
+      {/* 좌측 하이라이트 / 우측 그림자 */}
+      <View style={[styles.spineEdge, { backgroundColor: c2, opacity: 0.5 }]} pointerEvents="none" />
+      <Text style={styles.spineTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      {caption ? <Text style={styles.spineCap}>{caption}</Text> : null}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   night: { flex: 1, backgroundColor: '#08070d' },
   glassWrap: {
@@ -243,5 +268,38 @@ const styles = StyleSheet.create({
     width: 2,
     borderRadius: 2,
     backgroundColor: 'rgba(70,45,25,0.28)',
+  },
+  spine: {
+    width: 38,
+    height: 150,
+    borderTopLeftRadius: 7,
+    borderTopRightRadius: 7,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spineEdge: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 8,
+  },
+  spineTitle: {
+    transform: [{ rotate: '90deg' }],
+    width: 124,
+    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(58,42,28,0.92)',
+  },
+  spineCap: {
+    position: 'absolute',
+    bottom: 7,
+    fontSize: 8,
+    fontWeight: '600',
+    color: 'rgba(58,42,28,0.55)',
   },
 });

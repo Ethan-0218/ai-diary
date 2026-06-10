@@ -269,7 +269,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           </>
         )}
 
-        <Pressable onPress={() => navigation.navigate('Store')}>
+        <Pressable onPress={() => navigation.navigate('Shelf')}>
           <Text style={styles.shelfLink}>지난 일기 · 내 서재 ▸</Text>
         </Pressable>
       </>
