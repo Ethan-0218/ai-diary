@@ -12,6 +12,7 @@ import {
 import Svg, {
   Defs,
   LinearGradient as SvgLinearGradient,
+  Path,
   RadialGradient,
   Rect,
   Stop,
@@ -50,6 +51,30 @@ export function NightBackground({ children }: { children: ReactNode }) {
       </Svg>
       {children}
     </View>
+  );
+}
+
+/** 글라스 뒤로가기 버튼 — 반투명 blur 원 + 큰 chevron(‹). */
+export function BackButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8} style={styles.backBtn}>
+      <BlurView
+        style={StyleSheet.absoluteFill}
+        blurType="dark"
+        blurAmount={8}
+        reducedTransparencyFallbackColor="#1c182a"
+      />
+      <View style={[StyleSheet.absoluteFill, styles.backTint]} pointerEvents="none" />
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M15 5l-7 7 7 7"
+          stroke={colors.text}
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </Pressable>
   );
 }
 
@@ -270,6 +295,17 @@ export function Spine({
 
 const styles = StyleSheet.create({
   night: { flex: 1, backgroundColor: '#08070d' },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backTint: { backgroundColor: 'rgba(255,255,255,0.04)' },
   cardShadow: {
     shadowColor: '#7c6bd6',
     shadowOffset: { width: 0, height: 14 },

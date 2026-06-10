@@ -22,7 +22,12 @@ import { api } from '../lib/api';
 import { getCurrentCoords } from '../lib/location';
 import { toUserMessage } from '../lib/errors';
 import { ErrorState } from '../components/ui';
-import { GradientButton, NightBackground, ProgressBar } from '../components/glass';
+import {
+  BackButton,
+  GradientButton,
+  NightBackground,
+  ProgressBar,
+} from '../components/glass';
 import { Book3D } from '../components/Book3D';
 import { colors, formatColors, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
@@ -93,9 +98,7 @@ export function NotebookDetailScreen({
           { paddingTop: insets.top + spacing.sm },
         ]}
       >
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8} style={styles.back}>
-          <Text style={styles.backTxt}>‹</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
 
         {error ? (
           <ErrorState message={error} onRetry={load} inline />
@@ -314,20 +317,13 @@ const NOVEL = formatColors.novel;
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: 40 },
   loading: { color: colors.muted, marginTop: spacing.xl, textAlign: 'center' },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border2,
-    backgroundColor: colors.glass,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+  hero: {
+    flexDirection: 'row',
+    gap: 18,
+    alignItems: 'flex-end',
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
-  backTxt: { fontSize: 22, color: colors.textSoft, marginTop: -2 },
-
-  hero: { flexDirection: 'row', gap: 18, alignItems: 'flex-end', marginBottom: spacing.lg },
   heroInfo: { flex: 1, paddingBottom: 4, minWidth: 0 },
   heroTitle: {
     fontSize: 21,

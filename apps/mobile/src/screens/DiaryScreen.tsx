@@ -23,7 +23,12 @@ import { api, absoluteUrl } from '../lib/api';
 import { toUserMessage } from '../lib/errors';
 import { resolvePhotoTokens } from '../lib/photo-tokens';
 import { ErrorState } from '../components/ui';
-import { GlassCard, GradientButton, NightBackground } from '../components/glass';
+import {
+  BackButton,
+  GlassCard,
+  GradientButton,
+  NightBackground,
+} from '../components/glass';
 import { colors, radius, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -191,9 +196,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
       >
         {/* diary-top */}
         <View style={styles.top}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={8} style={styles.back}>
-            <Text style={styles.backTxt}>‹</Text>
-          </Pressable>
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.fmtLabel}>{def.label}</Text>
         </View>
 
@@ -364,17 +367,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: 60 },
 
   top: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border2,
-    backgroundColor: colors.glass,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backTxt: { fontSize: 22, color: colors.textSoft, marginTop: -2 },
   fmtLabel: {
     marginLeft: 'auto',
     fontSize: 12,
