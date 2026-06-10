@@ -27,6 +27,7 @@ import {
   NightBackground,
   ProgressBar,
 } from '../components/glass';
+import { Book3D } from '../components/Book3D';
 import { colors, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -227,7 +228,11 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                   }
                 >
                   <View style={styles.row}>
-                    <BookCover format={f.notebook.format} width={48} />
+                    <Book3D
+                      format={f.notebook.format}
+                      title={f.notebook.title}
+                      width={52}
+                    />
                     <View style={styles.rowInfo}>
                       <Text style={styles.rowTitle} numberOfLines={1}>
                         {f.notebook.title}
