@@ -96,7 +96,7 @@ export function GlassCard({
         <BlurView
           style={StyleSheet.absoluteFill}
           blurType="dark"
-          blurAmount={18}
+          blurAmount={6}
           reducedTransparencyFallbackColor="#16131f"
         />
         {size.w > 0 && (
@@ -127,9 +127,9 @@ export function GlassCard({
                       <Stop key="c" offset="1" stopColor="#ffffff" stopOpacity="0" />,
                     ]}
               </SvgLinearGradient>
-              {/* 상단 하이라이트 — 위쪽 빛 모서리 */}
+              {/* 상단 하이라이트 — 위쪽 빛 모서리(은은하게) */}
               <SvgLinearGradient id={`${id}h`} x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor="#ffffff" stopOpacity="0.24" />
+                <Stop offset="0" stopColor="#ffffff" stopOpacity="0.13" />
                 <Stop offset="0.22" stopColor="#ffffff" stopOpacity="0" />
               </SvgLinearGradient>
             </Defs>
