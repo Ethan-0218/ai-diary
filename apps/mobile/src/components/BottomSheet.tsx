@@ -106,25 +106,27 @@ export function BottomSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
+  const snapBack = () =>
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 24,
+      stiffness: 240,
+    }).start();
+
   const pan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+      // 잡는 즉시 제스처 점유(핸들 영역엔 다른 터치 대상이 없다)
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 3,
       onPanResponderMove: (_, g) => {
-        if (g.dy > 0) translateY.setValue(g.dy);
+        translateY.setValue(Math.max(0, g.dy));
       },
       onPanResponderRelease: (_, g) => {
-        if (g.dy > 110 || g.vy > 0.9) {
-          onCloseRef.current();
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 24,
-            stiffness: 240,
-          }).start();
-        }
+        if (g.dy > 80 || g.vy > 0.5) onCloseRef.current();
+        else snapBack();
       },
+      onPanResponderTerminate: snapBack,
     }),
   ).current;
 
@@ -153,11 +155,11 @@ export function BottomSheet({
             },
           ]}
         >
-          {/* 쓸어내려 닫기 핸들 */}
-          <View {...pan.panHandlers} style={styles.handleArea}>
+          {/* 쓸어내려 닫기 — 핸들+제목 영역 전체가 드래그 가능 */}
+          <View {...pan.panHandlers} style={styles.grabber}>
             <View style={styles.handle} />
+            {title ? <Text style={styles.title}>{title}</Text> : null}
           </View>
-          {title ? <Text style={styles.title}>{title}</Text> : null}
           {children}
         </Animated.View>
       </View>
@@ -184,17 +186,19 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 16,
   },
-  handleArea: { alignItems: 'center', paddingTop: 10, paddingBottom: 12 },
+  grabber: { paddingTop: 10, paddingBottom: 4 },
   handle: {
     width: 40,
     height: 5,
     borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.22)',
+    alignSelf: 'center',
   },
   title: {
     fontSize: 17,
     fontWeight: '800',
     color: colors.heading,
+    marginTop: 14,
     marginBottom: spacing.md,
   },
 });
