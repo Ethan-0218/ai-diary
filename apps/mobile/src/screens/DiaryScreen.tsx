@@ -330,10 +330,10 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
         <BlurView
           style={StyleSheet.absoluteFill}
           blurType="dark"
-          blurAmount={14}
+          blurAmount={5}
           reducedTransparencyFallbackColor="#14101e"
         />
-        <View style={[StyleSheet.absoluteFill, styles.headerTint]} pointerEvents="none" />
+        <View style={[StyleSheet.absoluteFill, styles.glassTint]} pointerEvents="none" />
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.fmtLabel}>{def.label}</Text>
       </View>
@@ -350,10 +350,10 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
           <BlurView
             style={StyleSheet.absoluteFill}
             blurType="dark"
-            blurAmount={14}
+            blurAmount={5}
             reducedTransparencyFallbackColor="#14101e"
           />
-          <View style={[StyleSheet.absoluteFill, styles.barTint]} pointerEvents="none" />
+          <View style={[StyleSheet.absoluteFill, styles.glassTint]} pointerEvents="none" />
 
           {reviseOpen && detail.diary && (
             <GlassCard radius={16} style={styles.reviseCard}>
@@ -418,9 +418,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  // 헤더는 옅게(뒤 콘텐츠 실루엣이 비치게), 푸터는 진하게(버튼 대비 확보)
-  headerTint: { backgroundColor: 'rgba(20,16,30,0.40)' },
-  barTint: { backgroundColor: 'rgba(20,16,30,0.62)' },
+  // 상/하단 글라스 바 공통 틴트 — 옅게 둬 뒤 콘텐츠가 비쳐 보이게 한다.
+  glassTint: { backgroundColor: 'rgba(20,16,30,0.28)' },
   fmtLabel: {
     marginLeft: 'auto',
     fontSize: 12,
