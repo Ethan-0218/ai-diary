@@ -21,6 +21,7 @@ import {
   ProgressBar,
 } from '../components/glass';
 import { Book3D } from '../components/Book3D';
+import { GearIcon } from '../components/icons';
 import { colors, formatColors, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -133,7 +134,7 @@ export function NotebookDetailScreen({
             hitSlop={8}
             onPress={() => navigation.navigate('NotebookSettings', { notebookId })}
           >
-            <Text style={styles.gearTxt}>⚙</Text>
+            <GearIcon size={19} color={colors.text} />
           </Pressable>
         </View>
       }
@@ -359,7 +360,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gearTxt: { fontSize: 18, color: colors.text },
   loading: { color: colors.muted, marginTop: spacing.xl, textAlign: 'center' },
   hero: {
     flexDirection: 'row',
