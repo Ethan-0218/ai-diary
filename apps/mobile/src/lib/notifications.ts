@@ -149,9 +149,13 @@ let inflight: Promise<void> | null = null;
  */
 export function reconcileReminders(): Promise<void> {
   if (inflight) return inflight;
-  inflight = doReconcile().finally(() => {
-    inflight = null;
-  });
+  inflight = doReconcile()
+    .catch(() => {
+      // 베스트에포트 — notifee/네트워크 실패가 호출부로 새어 나가지 않게 한다.
+    })
+    .finally(() => {
+      inflight = null;
+    });
   return inflight;
 }
 
