@@ -200,6 +200,16 @@ export const api = {
       ),
     );
   },
+
+  /** 음성 답변 전사 — 오디오 파일 업로드 → STT 텍스트 반환. */
+  transcribe: (id: string, file: RNFile) => {
+    const fd = new FormData();
+    fd.append('file', file as unknown as Blob);
+    return authFetch(`${API_BASE}/conversations/${id}/transcribe`, {
+      method: 'POST',
+      body: fd,
+    }).then((r) => json<{ text: string }>(r));
+  },
 };
 
 /** 상대 경로(/uploads/..)를 절대 URL로 — RN <Image>는 절대 URL이 필요 */

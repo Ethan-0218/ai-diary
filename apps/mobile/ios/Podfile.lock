@@ -49,6 +49,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - NitroSound (0.2.15):
+    - hermes-engine
+    - NitroModules
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - openiap (2.2.1)
   - RCTDeprecation (0.84.1)
   - RCTRequired (0.84.1)
@@ -1995,6 +2018,7 @@ DEPENDENCIES:
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - NitroIap (from `../node_modules/react-native-iap`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
+  - NitroSound (from `../node_modules/react-native-nitro-sound`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
   - RCTSwiftUI (from `../node_modules/react-native/ReactApple/RCTSwiftUI`)
@@ -2091,6 +2115,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-iap"
   NitroModules:
     :path: "../node_modules/react-native-nitro-modules"
+  NitroSound:
+    :path: "../node_modules/react-native-nitro-sound"
   RCTDeprecation:
     :path: "../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation"
   RCTRequired:
@@ -2257,6 +2283,7 @@ SPEC CHECKSUMS:
   hermes-engine: 32d1e6a56a9842b36079c28304e759d6d95c7227
   NitroIap: 8bb97d7f29f47fe65e8c9f590e939c657db076ab
   NitroModules: 5be94bacb7c185364172a58c4d8eeae3706966a6
+  NitroSound: 41ba18f68d38ec9657f1ece422f448fc0f92a284
   openiap: 4910f61869070601855431ba15cd4f3a116001f7
   RCTDeprecation: 7489702d717ceea80e271eeacb3fbca39fa3c056
   RCTRequired: 1cceac389e77dc5826c681cb782d864b0ed623fc

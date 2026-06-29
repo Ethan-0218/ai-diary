@@ -252,6 +252,19 @@ export class ConversationController {
     await fs.writeFile(join(UPLOAD_DIR, filename), buffer);
     return this.conv.addAttachment(id, req.userId, { filename, mimetype, buffer });
   }
+
+  /** 음성 답변 전사 — 오디오 업로드 → STT 텍스트 반환. 오디오는 저장하지 않는다. */
+  @Post(':id/transcribe')
+  @UseInterceptors(FileInterceptor('file'))
+  async transcribe(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedImage,
+  ) {
+    await this.conv.requireConversation(id, req.userId);
+    const text = await this.ai.transcribeAudio(file.buffer, file.mimetype);
+    return { text };
+  }
 }
 
 /**

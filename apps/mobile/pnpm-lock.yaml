@@ -74,6 +74,9 @@ importers:
       react-native-nitro-modules:
         specifier: 0.35.9
         version: 0.35.9(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)
+      react-native-nitro-sound:
+        specifier: ^0.2.15
+        version: 0.2.15(react-native-nitro-modules@0.35.9(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3))(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)
       react-native-polyfill-globals:
         specifier: ^3.1.0
         version: 3.1.0(base-64@1.0.0)(react-native-fetch-api@3.0.0)(react-native-get-random-values@2.0.0(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)))(react-native-url-polyfill@3.0.0(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)))(text-encoding@0.7.0)(web-streams-polyfill@4.3.0)
@@ -1225,6 +1228,9 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  '@react-native-community/slider@5.2.0':
+    resolution: {integrity: sha512-484sH8aWEaSjxaZ7HT3YZ8CKDcNes2synko1vdEz5DFEdvKAduxKJTj22L/qBMD7rtIkfbX69DMzWDAGbOAV6w==}
 
   '@react-native/assets-registry@0.84.1':
     resolution: {integrity: sha512-lAJ6PDZv95FdT9s9uhc9ivhikW1Zwh4j9XdXM7J2l4oUA3t37qfoBmTSDLuPyE3Bi+Xtwa11hJm0BUTT2sc/gg==}
@@ -3447,6 +3453,13 @@ packages:
       react: '*'
       react-native: '*'
 
+  react-native-nitro-sound@0.2.15:
+    resolution: {integrity: sha512-l2EGPSPB/BJUaq8tEmvIUh8VkfEIl23ol/5zAZmseTRRkVMfDQSuTw2Wu/9+RmcTlJLUjARN5gHR7P5OwdHSDA==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-nitro-modules: '>=0.35.4'
+
   react-native-polyfill-globals@3.1.0:
     resolution: {integrity: sha512-6ACmV1SjXvZP2LN6J2yK58yNACKddcvoiKLrSQdISx32IdYStfdmGXrbAfpd+TANrTlIaZ2SLoFXohNwhnqm/w==}
     peerDependencies:
@@ -5465,6 +5478,8 @@ snapshots:
     dependencies:
       react: 19.2.3
       react-native: 0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+
+  '@react-native-community/slider@5.2.0': {}
 
   '@react-native/assets-registry@0.84.1': {}
 
@@ -8286,6 +8301,13 @@ snapshots:
     dependencies:
       react: 19.2.3
       react-native: 0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+
+  react-native-nitro-sound@0.2.15(react-native-nitro-modules@0.35.9(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3))(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3):
+    dependencies:
+      '@react-native-community/slider': 5.2.0
+      react: 19.2.3
+      react-native: 0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+      react-native-nitro-modules: 0.35.9(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)
 
   react-native-polyfill-globals@3.1.0(base-64@1.0.0)(react-native-fetch-api@3.0.0)(react-native-get-random-values@2.0.0(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)))(react-native-url-polyfill@3.0.0(react-native@0.84.1(@babel/core@7.29.7)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@react-native/metro-config@0.84.1(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)))(text-encoding@0.7.0)(web-streams-polyfill@4.3.0):
     dependencies:
