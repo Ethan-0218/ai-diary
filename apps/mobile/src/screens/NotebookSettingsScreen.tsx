@@ -114,16 +114,13 @@ export function NotebookSettingsScreen({
 
   return (
     <NightBackground>
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <View style={styles.top}>
-          <BackButton onPress={() => navigation.goBack()} />
-        </View>
+      {/* 고정 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <BackButton onPress={() => navigation.goBack()} />
+      </View>
 
+      {/* 본문 스크롤 */}
+      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
         <Text style={styles.title}>알림 설정</Text>
         <Text style={styles.sub} numberOfLines={2}>
           {fromPurchase
@@ -165,17 +162,18 @@ export function NotebookSettingsScreen({
             </Text>
           </Pressable>
         )}
-
-        {fromPurchase && (
-          <View style={styles.doneWrap}>
-            <GradientButton
-              label="완료"
-              trailing="→"
-              onPress={() => navigation.navigate('Main', { screen: 'Shelf' })}
-            />
-          </View>
-        )}
       </ScrollView>
+
+      {/* 고정 하단 CTA (구매 직후 완료 버튼) */}
+      {fromPurchase && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom || spacing.md }]}>
+          <GradientButton
+            label="완료"
+            trailing="→"
+            onPress={() => navigation.navigate('Main', { screen: 'Shelf' })}
+          />
+        </View>
+      )}
 
       <TimePickerSheet
         visible={pickerOpen}
@@ -188,8 +186,24 @@ export function NotebookSettingsScreen({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: 40 },
-  top: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  flex: { flex: 1 },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  footer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   title: { ...type.h1, color: colors.heading, marginBottom: 8 },
   sub: { ...type.body, color: colors.textSoft, marginBottom: spacing.xl },
   card: { paddingVertical: 4 },
@@ -213,5 +227,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerBg,
   },
   permHintTxt: { color: colors.danger, fontSize: 13, fontWeight: '600' },
-  doneWrap: { marginTop: spacing.xl },
 });

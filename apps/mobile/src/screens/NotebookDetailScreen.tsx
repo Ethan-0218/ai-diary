@@ -101,23 +101,20 @@ export function NotebookDetailScreen({
 
   return (
     <NightBackground>
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <View style={styles.topRow}>
-          <BackButton onPress={() => navigation.goBack()} />
-          <Pressable
-            style={styles.gear}
-            hitSlop={8}
-            onPress={() => navigation.navigate('NotebookSettings', { notebookId })}
-          >
-            <Text style={styles.gearTxt}>⚙</Text>
-          </Pressable>
-        </View>
+      {/* 고정 헤더 — 스크롤에 딸려가지 않는다 */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Pressable
+          style={styles.gear}
+          hitSlop={8}
+          onPress={() => navigation.navigate('NotebookSettings', { notebookId })}
+        >
+          <Text style={styles.gearTxt}>⚙</Text>
+        </Pressable>
+      </View>
 
+      {/* 본문만 스크롤 */}
+      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
         {error ? (
           <ErrorState message={error} onRetry={load} inline />
         ) : !loaded || !nb ? (
@@ -156,44 +153,44 @@ export function NotebookDetailScreen({
                 onWrite={openToday}
               />
             )}
-
-            {!done && (
-              <View style={styles.ctaWrap}>
-                {todaySlot?.status === 'filled' ? (
-                  // 오늘 일기를 이미 완성 → 새로 쓰기 대신 보기
-                  <GradientButton
-                    label="오늘 일기 보기"
-                    trailing="→"
-                    onPress={() =>
-                      todaySlot.conversationId &&
-                      openDiary(todaySlot.conversationId)
-                    }
-                  />
-                ) : todaySlot?.status === 'drafting' ? (
-                  // 오늘 대화를 시작했지만 일기 미완성 → 이어가기
-                  <GradientButton
-                    label="오늘 이야기 이어가기"
-                    trailing="→"
-                    loading={busy}
-                    onPress={() =>
-                      todaySlot.conversationId
-                        ? openChat(todaySlot.conversationId)
-                        : openToday()
-                    }
-                  />
-                ) : (
-                  <GradientButton
-                    label={isPeriod ? '오늘 이야기하기' : '다음 장면 쓰기'}
-                    trailing="→"
-                    loading={busy}
-                    onPress={openToday}
-                  />
-                )}
-              </View>
-            )}
           </>
         )}
       </ScrollView>
+
+      {/* 고정 하단 CTA — 스크롤과 무관하게 항상 보임 */}
+      {loaded && nb && !done && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom || spacing.md }]}>
+          {todaySlot?.status === 'filled' ? (
+            // 오늘 일기를 이미 완성 → 새로 쓰기 대신 보기
+            <GradientButton
+              label="오늘 일기 보기"
+              trailing="→"
+              onPress={() =>
+                todaySlot.conversationId && openDiary(todaySlot.conversationId)
+              }
+            />
+          ) : todaySlot?.status === 'drafting' ? (
+            // 오늘 대화를 시작했지만 일기 미완성 → 이어가기
+            <GradientButton
+              label="오늘 이야기 이어가기"
+              trailing="→"
+              loading={busy}
+              onPress={() =>
+                todaySlot.conversationId
+                  ? openChat(todaySlot.conversationId)
+                  : openToday()
+              }
+            />
+          ) : (
+            <GradientButton
+              label={isPeriod ? '오늘 이야기하기' : '다음 장면 쓰기'}
+              trailing="→"
+              loading={busy}
+              onPress={openToday}
+            />
+          )}
+        </View>
+      )}
     </NightBackground>
   );
 }
@@ -359,11 +356,24 @@ function CellSlots({
 const NOVEL = formatColors.novel;
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: 40 },
-  topRow: {
+  flex: { flex: 1 },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  footer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   gear: {
     width: 40,
@@ -466,5 +476,4 @@ const styles = StyleSheet.create({
   slotLabel: { fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
   slotLabelNext: { fontSize: 10, color: colors.lav2, fontWeight: '700' },
 
-  ctaWrap: { marginTop: spacing.xl },
 });
