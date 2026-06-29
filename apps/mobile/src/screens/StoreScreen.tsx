@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFormatDef, type ProductDto } from '@ai-diary/shared';
 import { api } from '../lib/api';
@@ -77,6 +77,23 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
     }
   };
 
+  // 개발 전용 — IAP 없이 즉시 발행하고 설정 화면으로(시뮬레이터 테스트용).
+  const devGrant = async (card: ProductDto) => {
+    if (!__DEV__) return;
+    setBuying(card.appStoreProductId);
+    try {
+      const detail = await api.devGrant(card.appStoreProductId);
+      navigation.navigate('NotebookSettings', {
+        notebookId: detail.id,
+        fromPurchase: true,
+      });
+    } catch (e: any) {
+      Alert.alert('발급 실패', toUserMessage(e));
+    } finally {
+      setBuying(null);
+    }
+  };
+
   if (error) {
     return <ErrorState message={error} onRetry={load} />;
   }
@@ -90,6 +107,11 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
       ]}
     >
       <Text style={styles.lead}>마음에 드는 일기장을 골라 채워보세요.</Text>
+      {__DEV__ && (
+        <Text style={styles.devHint}>
+          (개발용) 카드를 길게 누르면 결제 없이 발급 → 설정으로 이동해요.
+        </Text>
+      )}
       {!loaded ? (
         <Text style={styles.muted}>불러오는 중…</Text>
       ) : (
@@ -99,7 +121,12 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
             const periodLabel =
               p.periodType === 'period' ? '기간형' : `칸형 ${p.slotCount}칸`;
             return (
-              <Card key={p.appStoreProductId}>
+              <Pressable
+                key={p.appStoreProductId}
+                onLongPress={__DEV__ ? () => devGrant(p) : undefined}
+                delayLongPress={500}
+              >
+              <Card>
                 <Text style={styles.title}>{p.title}</Text>
                 <Text style={styles.meta}>
                   {p.section} · {getFormatDef(p.format).label} · {periodLabel}
@@ -117,6 +144,7 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
                   />
                 </View>
               </Card>
+              </Pressable>
             );
           })}
         </View>
@@ -127,7 +155,8 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: 110 },
-  lead: { color: colors.muted, fontSize: 15, marginBottom: spacing.lg },
+  lead: { color: colors.muted, fontSize: 15, marginBottom: spacing.sm },
+  devHint: { color: colors.lav2, fontSize: 12, marginBottom: spacing.lg },
   muted: { color: colors.muted },
   title: { fontSize: 17, fontWeight: '700', color: colors.text },
   meta: { fontSize: 13, color: colors.muted, marginTop: 4 },

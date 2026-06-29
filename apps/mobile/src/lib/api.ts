@@ -139,6 +139,14 @@ export const api = {
       body: JSON.stringify({ format }),
     }).then((r) => json<NotebookDetailDto>(r)),
 
+  /** 개발 전용 — IAP 없이 상품을 발행(시뮬레이터 테스트용). 프로덕션 비활성. */
+  devGrant: (appStoreProductId: string) =>
+    authFetch(`${API_BASE}/notebooks/dev-grant`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appStoreProductId }),
+    }).then((r) => json<NotebookDetailDto>(r)),
+
   /**
    * 구매 영수증(StoreKit JWS=purchaseToken)을 백엔드에서 검증 → 일기장 발행.
    * 멱등(같은 트랜잭션 재호출은 이미 발행한 권 반환).
