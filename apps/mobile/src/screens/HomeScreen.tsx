@@ -27,6 +27,7 @@ import {
   GradientButton,
   NightBackground,
   ProgressBar,
+  TopScrim,
 } from '../components/glass';
 import { Book3D } from '../components/Book3D';
 import { colors, spacing } from '../theme';
@@ -324,6 +325,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           renderBody(summary)
         ) : null}
       </ScrollView>
+      <TopScrim height={insets.top} />
     </NightBackground>
   );
 }

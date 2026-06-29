@@ -215,6 +215,26 @@ export function GradientButton({
   );
 }
 
+/**
+ * 상단 safe-area(상태바) 글라스 스크림.
+ * 헤더가 없는 스크롤 화면에서 콘텐츠가 위로 스크롤될 때 시계·배터리 영역과 겹쳐
+ * 보이지 않도록, 상태바 높이만큼 상단을 덮는다. 탭은 통과(pointerEvents none).
+ */
+export function TopScrim({ height }: { height: number }) {
+  if (height <= 0) return null;
+  return (
+    <View style={[styles.topScrim, { height }]} pointerEvents="none">
+      <BlurView
+        style={StyleSheet.absoluteFill}
+        blurType="dark"
+        blurAmount={16}
+        reducedTransparencyFallbackColor="#0c0a14"
+      />
+      <View style={[StyleSheet.absoluteFill, styles.topScrimTint]} />
+    </View>
+  );
+}
+
 /** 진행도 바(트랙 + 라벤더 fill). ratio 0~1. */
 export function ProgressBar({ ratio }: { ratio: number }) {
   const pct = Math.max(0, Math.min(1, ratio));
@@ -363,6 +383,8 @@ const styles = StyleSheet.create({
   ctaSpin: { marginRight: 8 },
   ctaText: { color: colors.onLav, fontSize: 15, fontWeight: '800' },
   ctaTrailing: { color: colors.onLav, fontSize: 17, fontWeight: '800' },
+  topScrim: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 },
+  topScrimTint: { backgroundColor: 'rgba(10,8,16,0.45)' },
   progTrack: {
     height: 6,
     borderRadius: 99,

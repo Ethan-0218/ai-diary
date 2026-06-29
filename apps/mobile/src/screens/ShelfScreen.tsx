@@ -12,7 +12,12 @@ import { api } from '../lib/api';
 import { toUserMessage } from '../lib/errors';
 import { useAuth } from '../auth/AuthContext';
 import { ErrorState } from '../components/ui';
-import { NightBackground, ProgressBar, Spine } from '../components/glass';
+import {
+  NightBackground,
+  ProgressBar,
+  Spine,
+  TopScrim,
+} from '../components/glass';
 import { Book3D } from '../components/Book3D';
 import { colors, spacing } from '../theme';
 import type { TabScreenProps } from '../navigation/types';
@@ -156,6 +161,7 @@ export function ShelfScreen({ navigation }: TabScreenProps<'Shelf'>) {
           </>
         )}
       </ScrollView>
+      <TopScrim height={insets.top} />
     </NightBackground>
   );
 }
