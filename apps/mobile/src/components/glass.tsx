@@ -327,18 +327,36 @@ export function GradientButton({
  * 상단 safe-area(상태바) 글라스 스크림.
  * 헤더가 없는 스크롤 화면에서 콘텐츠가 위로 스크롤될 때 시계·배터리 영역과 겹쳐
  * 보이지 않도록, 상태바 높이만큼 상단을 덮는다. 탭은 통과(pointerEvents none).
+ *
+ * scrollY를 주면 **처음엔 투명, 스크롤되면 글라스가 페이드인**된다(GlassScaffold와 동일).
+ * 안 주면 항상 켜진 글라스.
  */
-export function TopScrim({ height }: { height: number }) {
+export function TopScrim({
+  height,
+  scrollY,
+}: {
+  height: number;
+  scrollY?: Animated.Value;
+}) {
   if (height <= 0) return null;
+  const opacity = scrollY
+    ? scrollY.interpolate({
+        inputRange: [0, 24],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      })
+    : 1;
   return (
     <View style={[styles.topScrim, { height }]} pointerEvents="none">
-      <BlurView
-        style={StyleSheet.absoluteFill}
-        blurType="dark"
-        blurAmount={16}
-        reducedTransparencyFallbackColor="#0c0a14"
-      />
-      <View style={[StyleSheet.absoluteFill, styles.topScrimTint]} />
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
+        <BlurView
+          style={StyleSheet.absoluteFill}
+          blurType="dark"
+          blurAmount={16}
+          reducedTransparencyFallbackColor="#0c0a14"
+        />
+        <View style={[StyleSheet.absoluteFill, styles.topScrimTint]} />
+      </Animated.View>
     </View>
   );
 }

@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { Alert, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import {
@@ -65,6 +64,7 @@ function firmSub(f: HomeFirmNotebook): string {
 export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const { signOut } = useAuth();
   const insets = useSafeAreaInsets();
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [summary, setSummary] = useState<HomeSummaryDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -298,11 +298,16 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
 
   return (
     <NightBackground>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + spacing.sm },
         ]}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
       >
         {/* home-top */}
         <View style={styles.top}>
@@ -324,8 +329,8 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         ) : summary ? (
           renderBody(summary)
         ) : null}
-      </ScrollView>
-      <TopScrim height={insets.top} />
+      </Animated.ScrollView>
+      <TopScrim height={insets.top} scrollY={scrollY} />
     </NightBackground>
   );
 }

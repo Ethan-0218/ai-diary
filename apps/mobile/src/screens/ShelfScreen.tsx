@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type NotebookDto } from '@ai-diary/shared';
 import { api } from '../lib/api';
@@ -28,6 +28,7 @@ const CARD_GAP = 14;
 
 export function ShelfScreen({ navigation }: TabScreenProps<'Shelf'>) {
   const insets = useSafeAreaInsets();
+  const scrollY = useRef(new Animated.Value(0)).current;
   const { user } = useAuth();
   const [notebooks, setNotebooks] = useState<NotebookDto[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +63,16 @@ export function ShelfScreen({ navigation }: TabScreenProps<'Shelf'>) {
 
   return (
     <NightBackground>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + spacing.sm },
         ]}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
       >
         <Text style={styles.greet}>차오르는 나의 서재</Text>
         <Text style={styles.title}>{name}의 서재</Text>
@@ -160,8 +166,8 @@ export function ShelfScreen({ navigation }: TabScreenProps<'Shelf'>) {
             )}
           </>
         )}
-      </ScrollView>
-      <TopScrim height={insets.top} />
+      </Animated.ScrollView>
+      <TopScrim height={insets.top} scrollY={scrollY} />
     </NightBackground>
   );
 }
