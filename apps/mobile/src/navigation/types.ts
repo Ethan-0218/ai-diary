@@ -18,6 +18,7 @@ export type RootStackParamList = {
   Login: undefined;
   Main: NavigatorScreenParams<RootTabParamList> | undefined;
   NotebookDetail: { notebookId: string };
+  NotebookSettings: { notebookId: string; fromPurchase?: boolean };
   Chat: { conversationId: string };
   Diary: { conversationId: string };
 };

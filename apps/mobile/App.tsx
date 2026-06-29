@@ -19,11 +19,14 @@ import type {
 import { colors } from './src/theme';
 import { GlassTabBar } from './src/components/GlassTabBar';
 import { LocationPrimingModal } from './src/components/LocationPrimingModal';
+import { NotificationPrimingModal } from './src/components/NotificationPrimingModal';
+import { ReminderReconciler } from './src/components/ReminderReconciler';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ShelfScreen } from './src/screens/ShelfScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { NotebookDetailScreen } from './src/screens/NotebookDetailScreen';
+import { NotebookSettingsScreen } from './src/screens/NotebookSettingsScreen';
 import { StoreScreen } from './src/screens/StoreScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { DiaryScreen } from './src/screens/DiaryScreen';
@@ -72,6 +75,7 @@ function RootNavigator() {
         <>
           <RootStack.Screen name="Main" component={MainTabs} />
           <RootStack.Screen name="NotebookDetail" component={NotebookDetailScreen} />
+          <RootStack.Screen name="NotebookSettings" component={NotebookSettingsScreen} />
           <RootStack.Screen name="Chat" component={ChatScreen} />
           <RootStack.Screen name="Diary" component={DiaryScreen} />
         </>
@@ -88,8 +92,10 @@ function App() {
         <NavigationContainer>
           <RootNavigator />
         </NavigationContainer>
+        <ReminderReconciler />
       </AuthProvider>
       <LocationPrimingModal />
+      <NotificationPrimingModal />
     </SafeAreaProvider>
   );
 }

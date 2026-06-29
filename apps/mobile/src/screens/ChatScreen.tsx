@@ -36,6 +36,7 @@ import { api, API_BASE, absoluteUrl, getAuthToken, type RNFile } from '../lib/ap
 import { toUserMessage } from '../lib/errors';
 import { pickPhoto } from '../lib/photo-picker';
 import { detectSignals, stripLeakedToolJson } from '../lib/chat-signals';
+import { reconcileReminders } from '../lib/notifications';
 import { ErrorState } from '../components/ui';
 import { BackButton, GlassCard, GradientButton, NightBackground } from '../components/glass';
 import { colors, spacing } from '../theme';
@@ -253,6 +254,8 @@ function ChatView({
     setBusyDiary(true);
     try {
       await api.generateDiary(detail.id);
+      // 오늘 일기를 썼으니 오늘 리마인더를 "썼어요" 변형으로 갱신(베스트에포트).
+      void reconcileReminders();
       navigation.replace('Diary', { conversationId: detail.id });
     } catch (e: any) {
       Alert.alert('일기 생성 실패', toUserMessage(e));

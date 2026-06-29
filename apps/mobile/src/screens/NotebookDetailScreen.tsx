@@ -107,7 +107,16 @@ export function NotebookDetailScreen({
           { paddingTop: insets.top + spacing.sm },
         ]}
       >
-        <BackButton onPress={() => navigation.goBack()} />
+        <View style={styles.topRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Pressable
+            style={styles.gear}
+            hitSlop={8}
+            onPress={() => navigation.navigate('NotebookSettings', { notebookId })}
+          >
+            <Text style={styles.gearTxt}>⚙</Text>
+          </Pressable>
+        </View>
 
         {error ? (
           <ErrorState message={error} onRetry={load} inline />
@@ -349,6 +358,22 @@ const NOVEL = formatColors.novel;
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: 40 },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gear: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border2,
+    backgroundColor: colors.glass2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gearTxt: { fontSize: 18, color: colors.text },
   loading: { color: colors.muted, marginTop: spacing.xl, textAlign: 'center' },
   hero: {
     flexDirection: 'row',

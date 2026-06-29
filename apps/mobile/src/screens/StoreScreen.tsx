@@ -60,11 +60,13 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
     try {
       const purchase = await purchaseProduct(card.appStoreProductId);
       // 결제 성공 → 백엔드 영수증 검증·발행 → 트랜잭션 종료(검증 성공해야 finish)
-      await api.verifyPurchase(purchase.purchaseToken ?? '');
+      const detail = await api.verifyPurchase(purchase.purchaseToken ?? '');
       await finishIapPurchase(purchase);
-      Alert.alert('구매 완료', `'${card.title}' 일기장이 책장에 꽂혔어요.`, [
-        { text: '확인', onPress: () => navigation.navigate('Shelf') },
-      ]);
+      // 구매 직후 일기장 알림 설정 화면으로(완료 시 책장으로 이동).
+      navigation.navigate('NotebookSettings', {
+        notebookId: detail.id,
+        fromPurchase: true,
+      });
     } catch (e: any) {
       // 사용자가 결제 시트를 닫은 경우는 조용히 넘어간다.
       if (String(e?.code) !== 'user-cancelled') {
