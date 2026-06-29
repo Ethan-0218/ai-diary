@@ -25,6 +25,7 @@ import {
 import { api, absoluteUrl } from '../lib/api';
 import { toUserMessage } from '../lib/errors';
 import { resolvePhotoTokens } from '../lib/photo-tokens';
+import { fixCjkEmphasis } from '../lib/markdown';
 import { ErrorState } from '../components/ui';
 import { BottomSheet } from '../components/BottomSheet';
 import {
@@ -218,7 +219,9 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
             )}
             {detail.diary ? (
               <Markdown style={markdownStyle(detail.format, imgWidth)}>
-                {resolvePhotoTokens(detail.diary.content, detail.attachments)}
+                {fixCjkEmphasis(
+                  resolvePhotoTokens(detail.diary.content, detail.attachments),
+                )}
               </Markdown>
             ) : (
               <Text style={styles.empty}>아직 일기가 생성되지 않았어요.</Text>
