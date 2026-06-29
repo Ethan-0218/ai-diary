@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +21,14 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, {
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Path,
+  Rect,
+  Stop,
+} from 'react-native-svg';
+import { BlurView } from '@react-native-community/blur';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { getFormatDef, type ConversationDetail } from '@ai-diary/shared';
@@ -22,7 +37,7 @@ import { toUserMessage } from '../lib/errors';
 import { pickPhoto } from '../lib/photo-picker';
 import { detectSignals, stripLeakedToolJson } from '../lib/chat-signals';
 import { ErrorState } from '../components/ui';
-import { BackButton, GradientButton, NightBackground } from '../components/glass';
+import { BackButton, GlassCard, GradientButton, NightBackground } from '../components/glass';
 import { colors, spacing } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
 
@@ -32,16 +47,60 @@ function chatDate(iso: string): string {
   return `오늘 · ${d.getMonth() + 1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`;
 }
 
-/** 달 아바타(AI) */
+/** 달 아바타(AI) — 라벤더 그라데이션 + 발광. */
 function MoonAvatar() {
+  const id = useId();
   return (
-    <View style={styles.aiAva}>
-      <Svg width={15} height={15} viewBox="0 0 24 24">
-        <Path
-          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-          fill="#fbf7ef"
-        />
-      </Svg>
+    <View style={styles.aiAvaShadow}>
+      <View style={styles.aiAva}>
+        <Svg width={30} height={30} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <SvgLinearGradient id={`${id}a`} x1="0.15" y1="0" x2="0.85" y2="1">
+              <Stop offset="0" stopColor="#c9bdfb" />
+              <Stop offset="1" stopColor="#8a7dd0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={30} height={30} fill={`url(#${id}a)`} />
+        </Svg>
+        <Svg width={15} height={15} viewBox="0 0 24 24">
+          <Path
+            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            fill="#fbf7ef"
+          />
+        </Svg>
+      </View>
+    </View>
+  );
+}
+
+/** 내 말풍선 — 라벤더 세로 그라데이션(밝은 위 → 진한 아래). */
+function MeBubble({ children }: { children: ReactNode }) {
+  const id = useId();
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  return (
+    <View
+      style={[styles.bubble, styles.bubbleMe]}
+      onLayout={(e) =>
+        setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+      }
+    >
+      {size.w > 0 && (
+        <Svg
+          width={size.w}
+          height={size.h}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        >
+          <Defs>
+            <SvgLinearGradient id={`${id}m`} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={colors.lav2} />
+              <Stop offset="1" stopColor={colors.lav} />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}m)`} />
+        </Svg>
+      )}
+      {children}
     </View>
   );
 }
@@ -135,8 +194,15 @@ function ChatView({
     [messages, detail.collectionState],
   );
 
+  // 첫 진입 시엔 애니메이션 없이 곧장 바닥으로(쫙 내려가는 연출 방지),
+  // 이후 새 메시지·상태 변화엔 부드럽게 따라간다.
+  const didInitialScroll = useRef(false);
   useEffect(() => {
-    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    const animated = didInitialScroll.current;
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated });
+      didInitialScroll.current = true;
+    }, 50);
     return () => clearTimeout(t);
   }, [messages, busy]);
 
@@ -201,8 +267,15 @@ function ChatView({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        {/* 상단바 */}
+        {/* 상단바 — 글라스 sticky 바 */}
         <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            blurType="dark"
+            blurAmount={12}
+            reducedTransparencyFallbackColor="#14101e"
+          />
+          <View style={[StyleSheet.absoluteFill, styles.barTint]} pointerEvents="none" />
           <BackButton onPress={() => navigation.goBack()} />
           <View style={styles.ctInfo}>
             <View style={styles.ctTitleRow}>
@@ -257,9 +330,17 @@ function ChatView({
             </View>
           )}
 
-          {/* 충분히 모았을 때 — 일기로 남기기 카드 */}
-          {signals.diary && (
-            <View style={styles.enough}>
+          {/* 충분히 모았을 때 — 일기로 남기기 카드.
+              단, 바로 위 메시지(AI 답변/생각중 버블)가 모두 렌더된 뒤에만 노출:
+              스트리밍·전송 중(busy)에는 숨겨 두고 완료 후 나타나게 한다. */}
+          {signals.diary && !busy && (
+            <GlassCard
+              lavender
+              strong
+              radius={16}
+              style={styles.enough}
+              contentStyle={styles.enoughPad}
+            >
               <Text style={styles.enoughTxt}>
                 오늘 이야기, 이대로 일기로 남겨줄까?
               </Text>
@@ -268,12 +349,19 @@ function ChatView({
                 loading={busyDiary}
                 onPress={finishDiary}
               />
-            </View>
+            </GlassCard>
           )}
         </ScrollView>
 
-        {/* 입력바 */}
+        {/* 입력바 — 글라스 sticky 바 */}
         <View style={[styles.inputWrap, { paddingBottom: insets.bottom || 14 }]}>
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            blurType="dark"
+            blurAmount={12}
+            reducedTransparencyFallbackColor="#14101e"
+          />
+          <View style={[StyleSheet.absoluteFill, styles.barTint]} pointerEvents="none" />
           {pending && (
             <View style={styles.pendingRow}>
               <View>
@@ -370,26 +458,32 @@ function MessageBubble({ message }: { message: UIMessage }) {
     .filter((u): u is string => !!u);
   if (!text && photos.length === 0) return null;
 
+  const content = (
+    <>
+      {photos.map((url, i) => (
+        <Image
+          key={i}
+          source={{ uri: absoluteUrl(url) }}
+          style={[
+            styles.bubbleImg,
+            { marginBottom: text || i < photos.length - 1 ? 8 : 0 },
+          ]}
+        />
+      ))}
+      {!!text && (
+        <Text style={isUser ? styles.bubbleMeTxt : styles.bubbleAiTxt}>{text}</Text>
+      )}
+    </>
+  );
+
   return (
     <View style={isUser ? styles.msgMe : styles.msgAi}>
       {!isUser && <MoonAvatar />}
-      <View style={[styles.bubble, isUser ? styles.bubbleMe : styles.bubbleAi]}>
-        {photos.map((url, i) => (
-          <Image
-            key={i}
-            source={{ uri: absoluteUrl(url) }}
-            style={[
-              styles.bubbleImg,
-              { marginBottom: text || i < photos.length - 1 ? 8 : 0 },
-            ]}
-          />
-        ))}
-        {!!text && (
-          <Text style={isUser ? styles.bubbleMeTxt : styles.bubbleAiTxt}>
-            {text}
-          </Text>
-        )}
-      </View>
+      {isUser ? (
+        <MeBubble>{content}</MeBubble>
+      ) : (
+        <View style={[styles.bubble, styles.bubbleAi]}>{content}</View>
+      )}
     </View>
   );
 }
@@ -405,7 +499,10 @@ const styles = StyleSheet.create({
     gap: 11,
     paddingHorizontal: 16,
     paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
+  barTint: { backgroundColor: 'rgba(20,16,30,0.62)' },
   ctInfo: { flex: 1, minWidth: 0 },
   ctTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ctTitle: { fontSize: 14.5, fontWeight: '800', color: colors.text, letterSpacing: -0.3, flexShrink: 1 },
@@ -443,11 +540,19 @@ const styles = StyleSheet.create({
 
   msgAi: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, maxWidth: '84%', alignSelf: 'flex-start' },
   msgMe: { alignSelf: 'flex-end', maxWidth: '84%' },
+  aiAvaShadow: {
+    alignSelf: 'flex-end',
+    shadowColor: '#9680f0',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 9,
+    elevation: 5,
+  },
   aiAva: {
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: '#9a8cd8',
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -458,7 +563,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderBottomLeftRadius: 6,
   },
-  bubbleMe: { backgroundColor: colors.lav2, borderBottomRightRadius: 6 },
+  bubbleMe: {
+    backgroundColor: colors.lav2,
+    borderBottomRightRadius: 6,
+    overflow: 'hidden',
+  },
   bubbleAiTxt: { color: colors.text, fontSize: 14.5, lineHeight: 22 },
   bubbleMeTxt: { color: colors.onLav, fontSize: 14.5, lineHeight: 22, fontWeight: '500' },
   bubbleImg: { width: 200, height: 150, borderRadius: 12, resizeMode: 'cover' },
@@ -476,16 +585,8 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.danger, fontSize: 14 },
 
-  enough: {
-    alignSelf: 'stretch',
-    marginTop: 8,
-    borderRadius: 16,
-    padding: 14,
-    backgroundColor: 'rgba(169,156,242,0.16)',
-    borderWidth: 1,
-    borderColor: colors.border2,
-    gap: 11,
-  },
+  enough: { alignSelf: 'stretch', marginTop: 8 },
+  enoughPad: { padding: 14, gap: 11 },
   enoughTxt: { fontSize: 13.5, color: colors.text, lineHeight: 20, fontWeight: '600' },
 
   // 입력바
@@ -494,7 +595,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: 'rgba(20,16,30,0.6)',
   },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   pendingImg: {

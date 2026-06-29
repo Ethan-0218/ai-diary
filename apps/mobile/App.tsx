@@ -18,6 +18,7 @@ import type {
 } from './src/navigation/types';
 import { colors } from './src/theme';
 import { GlassTabBar } from './src/components/GlassTabBar';
+import { LocationPrimingModal } from './src/components/LocationPrimingModal';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ShelfScreen } from './src/screens/ShelfScreen';
@@ -88,6 +89,7 @@ function App() {
           <RootNavigator />
         </NavigationContainer>
       </AuthProvider>
+      <LocationPrimingModal />
     </SafeAreaProvider>
   );
 }

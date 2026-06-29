@@ -2246,7 +2246,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   FBLazyVector: baf9d0492aa305444465c798e972f87e6a60dc69
-  hermes-engine: bf8de780d8ac13a03bfd5e800a3a37e8dad2a9db
+  hermes-engine: 32d1e6a56a9842b36079c28304e759d6d95c7227
   NitroIap: 8bb97d7f29f47fe65e8c9f590e939c657db076ab
   NitroModules: 5be94bacb7c185364172a58c4d8eeae3706966a6
   openiap: 4910f61869070601855431ba15cd4f3a116001f7
@@ -2323,7 +2323,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: e96e93b493d8d86eeaee3e590ba0be53f6abe46f
   ReactCodegen: 2701033208d8c8055a75be97727fefcb56bf6d3d
   ReactCommon: 72fd7add948b85461e4af21da4451d0c6f1fea5d
-  ReactNativeDependencies: 255162ff64397453861ce9bde276564e02f9a14d
+  ReactNativeDependencies: b38882942446f62f21b2cbcb985ae9750cb5e4c5
   RNAppleAuthentication: a89c9804592b38ed4ab11f0aee68d05ba12ad432
   RNCAsyncStorage: 446abe7f5eb8df2f00063746a953524937033299
   RNScreens: 04eaa3cec7258c13d744af58aed4aec958a17eda
