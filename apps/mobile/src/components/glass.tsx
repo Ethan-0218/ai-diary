@@ -82,12 +82,22 @@ export function GlassScaffold({
   const [headerH, setHeaderH] = useState(0);
   const [footerH, setFooterH] = useState(0);
   const scrollY = useRef(new Animated.Value(0)).current;
-  // 스크롤 0→24 구간에서 글라스 0→1로 페이드(처음 투명 → 스크롤 시 frosted).
-  const glass = scrollY.interpolate({
+  // 헤더: 스크롤 0→24 구간에서 글라스 0→1로 페이드(처음 투명 → 스크롤 시 frosted).
+  const headerGlass = scrollY.interpolate({
     inputRange: [0, 24],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
+
+  // 푸터: "뒤에 콘텐츠가 있을 때"만 글라스. 바닥까지 남은 거리로 판정 →
+  // 콘텐츠가 푸터 뒤로 깔리면 frosted, 끝까지 스크롤(또는 콘텐츠가 짧음)하면 투명.
+  const footerGlass = useRef(new Animated.Value(0)).current;
+  const layoutH = useRef(0);
+  const contentH = useRef(0);
+  const updateFooterGlass = (offsetY: number) => {
+    const distanceToBottom = contentH.current - layoutH.current - offsetY;
+    footerGlass.setValue(Math.max(0, Math.min(1, distanceToBottom / 24)));
+  };
 
   return (
     <NightBackground>
@@ -104,9 +114,25 @@ export function GlassScaffold({
         scrollIndicatorInsets={{ top: headerH, bottom: footer != null ? footerH : 0 }}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
+        onLayout={(e) => {
+          layoutH.current = e.nativeEvent.layout.height;
+          updateFooterGlass(0);
+        }}
+        onContentSizeChange={(_w, h) => {
+          contentH.current = h;
+          updateFooterGlass(0);
+        }}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true },
+          {
+            useNativeDriver: true,
+            listener: (e: any) => {
+              const ne = e.nativeEvent;
+              layoutH.current = ne.layoutMeasurement.height;
+              contentH.current = ne.contentSize.height;
+              updateFooterGlass(ne.contentOffset.y);
+            },
+          },
         )}
       >
         {children}
@@ -118,7 +144,7 @@ export function GlassScaffold({
         onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
       >
         <Animated.View
-          style={[StyleSheet.absoluteFill, styles.scaffHeaderGlass, { opacity: glass }]}
+          style={[StyleSheet.absoluteFill, styles.scaffHeaderGlass, { opacity: headerGlass }]}
           pointerEvents="none"
         >
           <BlurView
@@ -143,7 +169,7 @@ export function GlassScaffold({
             onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
           >
             <Animated.View
-              style={[StyleSheet.absoluteFill, styles.scaffFooterGlass, { opacity: glass }]}
+              style={[StyleSheet.absoluteFill, styles.scaffFooterGlass, { opacity: footerGlass }]}
               pointerEvents="none"
             >
               <BlurView
