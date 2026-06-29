@@ -59,6 +59,13 @@ export class Notebook {
   @Column({ default: false })
   voiceEnabled!: boolean;
 
+  // ── 리마인더(로컬 푸시) 설정 ──
+  @Column({ default: true })
+  reminderEnabled!: boolean;
+
+  @Column({ type: 'varchar', length: 5, default: '22:00' })
+  reminderTime!: string; // 'HH:mm' 로컬 wall-clock
+
   // ── 기간형(period)만 ──
   @Column({ type: 'date', nullable: true })
   periodStart!: string | null;

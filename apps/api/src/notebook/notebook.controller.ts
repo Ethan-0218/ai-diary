@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -11,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
-import type { StarterFormat } from '@ai-diary/shared';
+import type { StarterFormat, UpdateReminderDto } from '@ai-diary/shared';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { NotebookService } from './notebook.service';
 
@@ -74,5 +75,15 @@ export class NotebookController {
   @Get(':id')
   getOne(@Req() req: AuthedRequest, @Param('id') id: string) {
     return this.notebooks.getNotebook(id, req.userId);
+  }
+
+  /** 일기장 리마인더(on/off·시각) 변경. */
+  @Patch(':id/reminder')
+  updateReminder(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Body() body: UpdateReminderDto,
+  ) {
+    return this.notebooks.updateReminder(id, req.userId, body);
   }
 }

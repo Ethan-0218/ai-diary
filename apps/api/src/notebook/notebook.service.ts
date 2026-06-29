@@ -21,6 +21,7 @@ import {
   type NotebookDto,
   type NotebookSource,
   type PeriodSpec,
+  type UpdateReminderDto,
   type ProductDto,
   type SlotDto,
   type StarterFormat,
@@ -49,6 +50,23 @@ export class NotebookService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await this.seedCatalog();
     await this.backfillLegacyNotebooks();
+    await this.backfillReminderDefaults();
+  }
+
+  /** 리마인더 컬럼이 NULL인 기존 행을 기본값(켜짐/22:00)으로 멱등 백필. */
+  async backfillReminderDefaults(): Promise<void> {
+    await this.notebooks
+      .createQueryBuilder()
+      .update(Notebook)
+      .set({ reminderEnabled: true })
+      .where('"reminderEnabled" IS NULL')
+      .execute();
+    await this.notebooks
+      .createQueryBuilder()
+      .update(Notebook)
+      .set({ reminderTime: '22:00' })
+      .where('"reminderTime" IS NULL')
+      .execute();
   }
 
   /** PRODUCT_CATALOG를 Product 테이블에 upsert 시드(진열 메타는 이후 DB에서 관리). */
@@ -362,6 +380,29 @@ export class NotebookService implements OnModuleInit {
     return n;
   }
 
+  /** 일기장 리마인더(on/off·시각) 변경. 소유권 확인 후 갱신된 상세를 반환. */
+  async updateReminder(
+    id: string,
+    userId: string,
+    dto: UpdateReminderDto,
+  ): Promise<NotebookDetailDto> {
+    await this.requireNotebook(id, userId);
+    const patch: Partial<Notebook> = {};
+    if (typeof dto.reminderEnabled === 'boolean') {
+      patch.reminderEnabled = dto.reminderEnabled;
+    }
+    if (dto.reminderTime !== undefined) {
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(dto.reminderTime)) {
+        throw new BadRequestException('시간 형식이 올바르지 않아요(HH:mm).');
+      }
+      patch.reminderTime = dto.reminderTime;
+    }
+    if (Object.keys(patch).length > 0) {
+      await this.notebooks.update({ id }, patch);
+    }
+    return this.getNotebook(id, userId);
+  }
+
   /**
    * 오늘 쓸 칸을 해석한다(없으면 BadRequest).
    * - 기간형: slotDate=오늘인 칸.
@@ -602,6 +643,8 @@ function toNotebookDto(n: Notebook, filledCount: number): NotebookDto {
     periodEnd: n.periodEnd,
     status: n.status as NotebookDto['status'],
     filledCount,
+    reminderEnabled: n.reminderEnabled,
+    reminderTime: n.reminderTime,
     createdAt: n.createdAt.toISOString(),
   };
 }

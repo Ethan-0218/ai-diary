@@ -272,11 +272,22 @@ export interface NotebookDto {
   status: NotebookStatus;
   /** 채워진(=filled) 칸 수 */
   filledCount: number;
+  /** 일기 작성 리마인더 on/off (기본 on). */
+  reminderEnabled: boolean;
+  /** 리마인더 발송 시각 — 로컬 wall-clock 'HH:mm' 24h (기본 '22:00'). */
+  reminderTime: string;
   createdAt: string;
 }
 
 export interface NotebookDetailDto extends NotebookDto {
   slots: SlotDto[];
+}
+
+/** 일기장 리마인더 설정 변경 요청(PATCH /notebooks/:id/reminder). */
+export interface UpdateReminderDto {
+  reminderEnabled?: boolean;
+  /** 'HH:mm' 24h. */
+  reminderTime?: string;
 }
 
 // ─── 적응형 홈(오늘) 요약 ───

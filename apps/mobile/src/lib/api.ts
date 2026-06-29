@@ -121,6 +121,17 @@ export const api = {
       json<NotebookDetailDto>(r),
     ),
 
+  /** 일기장 리마인더(on/off·시각) 변경 → 갱신된 상세 반환. */
+  updateReminder: (
+    id: string,
+    body: { reminderEnabled?: boolean; reminderTime?: string },
+  ) =>
+    authFetch(`${API_BASE}/notebooks/${id}/reminder`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then((r) => json<NotebookDetailDto>(r)),
+
   mintStarter: (format: DiaryFormat) =>
     authFetch(`${API_BASE}/notebooks/starter`, {
       method: 'POST',
