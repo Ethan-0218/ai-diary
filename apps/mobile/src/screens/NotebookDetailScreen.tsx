@@ -34,8 +34,11 @@ import type { RootScreenProps } from '../navigation/types';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const pad = (n: number) => String(n).padStart(2, '0');
+// 서버 todaySlotDate()와 동일한 "새벽 5시 컷" — 5시 이전은 전날을 오늘로 친다.
+// (기기 타임존 = 유저 타임존이라 로컬 시각 기준으로 서버 슬롯 날짜와 정합)
 const todayLocal = () => {
   const d = new Date();
+  if (d.getHours() < 5) d.setDate(d.getDate() - 1);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
@@ -90,6 +93,12 @@ export function NotebookDetailScreen({
   const isPeriod = nb?.periodType === 'period';
   const done = nb ? nb.status === 'completed' : false;
 
+  // 오늘 칸의 상태 — 기간형에서 하단 CTA를 "오늘 이미 썼는지"에 맞춰 바꾼다.
+  const todaySlot =
+    isPeriod && nb
+      ? nb.slots.find((s) => s.slotDate === todayLocal()) ?? null
+      : null;
+
   return (
     <NightBackground>
       <ScrollView
@@ -141,12 +150,36 @@ export function NotebookDetailScreen({
 
             {!done && (
               <View style={styles.ctaWrap}>
-                <GradientButton
-                  label={isPeriod ? '오늘 이야기하기' : '다음 장면 쓰기'}
-                  trailing="→"
-                  loading={busy}
-                  onPress={openToday}
-                />
+                {todaySlot?.status === 'filled' ? (
+                  // 오늘 일기를 이미 완성 → 새로 쓰기 대신 보기
+                  <GradientButton
+                    label="오늘 일기 보기"
+                    trailing="→"
+                    onPress={() =>
+                      todaySlot.conversationId &&
+                      openDiary(todaySlot.conversationId)
+                    }
+                  />
+                ) : todaySlot?.status === 'drafting' ? (
+                  // 오늘 대화를 시작했지만 일기 미완성 → 이어가기
+                  <GradientButton
+                    label="오늘 이야기 이어가기"
+                    trailing="→"
+                    loading={busy}
+                    onPress={() =>
+                      todaySlot.conversationId
+                        ? openChat(todaySlot.conversationId)
+                        : openToday()
+                    }
+                  />
+                ) : (
+                  <GradientButton
+                    label={isPeriod ? '오늘 이야기하기' : '다음 장면 쓰기'}
+                    trailing="→"
+                    loading={busy}
+                    onPress={openToday}
+                  />
+                )}
               </View>
             )}
           </>
