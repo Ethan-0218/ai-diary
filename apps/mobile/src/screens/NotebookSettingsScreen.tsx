@@ -46,6 +46,13 @@ export function NotebookSettingsScreen({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [permBlocked, setPermBlocked] = useState(false);
 
+  // 권한 확보(미결정이면 사전 안내→시스템 요청) 후 예약. 거부면 안내 배너 표시.
+  const ensurePermissionAndSchedule = useCallback(async () => {
+    const ok = await ensureNotificationPermission();
+    setPermBlocked(!ok && (await getNotificationPermission()) === 'denied');
+    if (ok) await reconcileReminders();
+  }, []);
+
   const load = useCallback(() => {
     setError(null);
     api
@@ -54,46 +61,47 @@ export function NotebookSettingsScreen({
         setNb(d);
         setEnabled(d.reminderEnabled);
         setTime(d.reminderTime);
+        // 리마인더가 켜진 채로 설정 화면에 들어오면 권한 확보+예약을 보장한다
+        // (토글이 이미 ON이라 onToggle이 안 불려 권한 요청이 누락되던 문제 해결).
+        if (d.reminderEnabled) void ensurePermissionAndSchedule();
       })
       .catch((e) => setError(toUserMessage(e)));
-  }, [notebookId]);
+  }, [notebookId, ensurePermissionAndSchedule]);
   useEffect(load, [load]);
 
-  // 변경분을 백엔드에 저장하고 로컬 알림을 재동기화. 실패 시 이전 값으로 롤백.
-  const persist = async (
+  // 변경분을 백엔드에 저장. 실패 시 롤백. 성공 여부 반환.
+  const save = async (
     patch: { reminderEnabled?: boolean; reminderTime?: string },
     rollback: () => void,
-  ) => {
+  ): Promise<boolean> => {
     try {
       await api.updateReminder(notebookId, patch);
-      if (patch.reminderEnabled === false) {
-        await cancelNotebookReminders(notebookId);
-      } else {
-        await reconcileReminders();
-      }
+      return true;
     } catch (e) {
       rollback();
       Alert.alert('저장 실패', toUserMessage(e));
+      return false;
     }
   };
 
   const onToggle = async (next: boolean) => {
     const prev = enabled;
     setEnabled(next);
+    if (!(await save({ reminderEnabled: next }, () => setEnabled(prev)))) return;
     if (next) {
-      const ok = await ensureNotificationPermission();
-      setPermBlocked(!ok && (await getNotificationPermission()) === 'denied');
+      await ensurePermissionAndSchedule();
     } else {
       setPermBlocked(false);
+      await cancelNotebookReminders(notebookId);
     }
-    await persist({ reminderEnabled: next }, () => setEnabled(prev));
   };
 
   const onConfirmTime = async (next: string) => {
     const prev = time;
     setTime(next);
     setPickerOpen(false);
-    await persist({ reminderTime: next }, () => setTime(prev));
+    if (!(await save({ reminderTime: next }, () => setTime(prev)))) return;
+    if (enabled) await ensurePermissionAndSchedule();
   };
 
   if (error && !nb) {
