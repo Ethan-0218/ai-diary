@@ -306,14 +306,41 @@ export function GradientButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const off = disabled || loading;
+  const id = useId();
+  const [size, setSize] = useState({ w: 0, h: 0 });
   return (
     <Pressable
       onPress={onPress}
       disabled={off}
       style={[styles.cta, off && styles.ctaOff, style]}
+      onLayout={(e) =>
+        setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+      }
     >
-      {/* 상단 광택 */}
-      <View style={styles.ctaGloss} pointerEvents="none" />
+      {/* 부드러운 라벤더 그라데이션(밝은 위→연한 아래) + 은은한 상단 하이라이트.
+          하드 경계 없이 자연스러운 광택. */}
+      {size.w > 0 && (
+        <Svg
+          width={size.w}
+          height={size.h}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        >
+          <Defs>
+            <SvgLinearGradient id={`${id}b`} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#C9BEFD" />
+              <Stop offset="1" stopColor="#A99CF2" />
+            </SvgLinearGradient>
+            <SvgLinearGradient id={`${id}g`} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#ffffff" stopOpacity="0.30" />
+              <Stop offset="0.5" stopColor="#ffffff" stopOpacity="0.05" />
+              <Stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}b)`} />
+          <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}g)`} />
+        </Svg>
+      )}
       {loading && (
         <ActivityIndicator size="small" color={colors.onLav} style={styles.ctaSpin} />
       )}
@@ -496,14 +523,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: colors.lav2,
     overflow: 'hidden',
-  },
-  ctaGloss: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '50%',
-    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   ctaOff: { opacity: 0.5 },
   ctaSpin: { marginRight: 8 },
