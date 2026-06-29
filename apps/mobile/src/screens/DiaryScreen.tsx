@@ -26,6 +26,7 @@ import { api, absoluteUrl } from '../lib/api';
 import { toUserMessage } from '../lib/errors';
 import { resolvePhotoTokens } from '../lib/photo-tokens';
 import { ErrorState } from '../components/ui';
+import { BottomSheet } from '../components/BottomSheet';
 import {
   BackButton,
   GlassCard,
@@ -355,31 +356,6 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
           />
           <View style={[StyleSheet.absoluteFill, styles.glassTint]} pointerEvents="none" />
 
-          {reviseOpen && detail.diary && (
-            <GlassCard radius={16} style={styles.reviseCard}>
-              <Text style={styles.cardDesc}>
-                고치고 싶은 점을 적으면 그대로 다시 써줘요. 예: “오전→오후 순서로”,
-                “좀 더 담백하게”.
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="이렇게 고쳐줘…"
-                placeholderTextColor={colors.muted}
-                value={reviseInput}
-                onChangeText={setReviseInput}
-                editable={!revising}
-              />
-              <View style={{ marginTop: spacing.sm }}>
-                <GradientButton
-                  label={revising ? '고치는 중…' : '수정 반영'}
-                  loading={revising}
-                  disabled={!reviseInput.trim()}
-                  onPress={revise}
-                />
-              </View>
-            </GlassCard>
-          )}
-
           <View style={styles.actions}>
             <GradientButton
               label="＋ 더 얘기해 보강"
@@ -388,13 +364,41 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
             />
             <Pressable
               style={styles.editBtn}
-              onPress={() => setReviseOpen((v) => !v)}
+              onPress={() => setReviseOpen(true)}
             >
               <Text style={styles.editTxt}>✎ 고치기</Text>
             </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* 고치기 — 바텀시트(슬라이드 + 쓸어내려 닫기) */}
+      <BottomSheet
+        visible={reviseOpen && !!detail.diary}
+        onClose={() => setReviseOpen(false)}
+        title="일기 고치기"
+      >
+        <Text style={styles.cardDesc}>
+          고치고 싶은 점을 적으면 그대로 다시 써줘요. 예: “오전→오후 순서로”, “좀
+          더 담백하게”.
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="이렇게 고쳐줘…"
+          placeholderTextColor={colors.muted}
+          value={reviseInput}
+          onChangeText={setReviseInput}
+          editable={!revising}
+        />
+        <View style={{ marginTop: spacing.md }}>
+          <GradientButton
+            label={revising ? '고치는 중…' : '수정 반영'}
+            loading={revising}
+            disabled={!reviseInput.trim()}
+            onPress={revise}
+          />
+        </View>
+      </BottomSheet>
     </NightBackground>
   );
 }
@@ -473,7 +477,6 @@ const styles = StyleSheet.create({
   },
   editTxt: { color: colors.textSoft, fontWeight: '700', fontSize: 14 },
 
-  reviseCard: {},
   cardDesc: { color: colors.textSoft, fontSize: 13, lineHeight: 19, marginBottom: 10 },
   input: {
     borderWidth: 1,
