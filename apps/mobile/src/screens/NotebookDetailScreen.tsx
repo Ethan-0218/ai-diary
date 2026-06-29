@@ -93,11 +93,11 @@ export function NotebookDetailScreen({
   const isPeriod = nb?.periodType === 'period';
   const done = nb ? nb.status === 'completed' : false;
 
-  // 오늘 칸의 상태 — 기간형에서 하단 CTA를 "오늘 이미 썼는지"에 맞춰 바꾼다.
-  const todaySlot =
-    isPeriod && nb
-      ? nb.slots.find((s) => s.slotDate === todayLocal()) ?? null
-      : null;
+  // 오늘 칸의 상태 — 하단 CTA를 "오늘 이미 썼는지"에 맞춰 바꾼다.
+  // 칸형도 오늘 시작/작성한 칸은 slotDate=오늘이라 하루 한 칸만 쓰게 강제된다.
+  const todaySlot = nb
+    ? nb.slots.find((s) => s.slotDate === todayLocal()) ?? null
+    : null;
 
   return (
     <NightBackground>
@@ -290,6 +290,8 @@ function CellSlots({
 }) {
   // 다음에 새로 쓸 칸 = 첫 빈 칸
   const nextIdx = nb.slots.find((s) => s.status === 'empty')?.index;
+  // 오늘 이미 시작/작성한 칸이 있으면 '지금 쓰기'를 막는다(하루 한 칸).
+  const wroteToday = nb.slots.some((s) => s.slotDate === todayLocal());
 
   return (
     <View style={styles.slots}>
@@ -326,8 +328,8 @@ function CellSlots({
             </View>
           );
         }
-        // 다음 빈 칸 → 새로 쓰기
-        if (s.index === nextIdx) {
+        // 다음 빈 칸 → 새로 쓰기 (단, 오늘 이미 쓴 날이면 잠금)
+        if (s.index === nextIdx && !wroteToday) {
           return (
             <View key={s.id} style={styles.slotCell}>
               <Pressable
