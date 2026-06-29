@@ -4,15 +4,7 @@ import React, {
   useLayoutEffect,
   useState,
 } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   DEFAULT_MODEL_ID,
   getFormatDef,
@@ -24,8 +16,8 @@ import { toUserMessage } from '../lib/errors';
 import { ErrorState } from '../components/ui';
 import {
   BackButton,
+  GlassScaffold,
   GradientButton,
-  NightBackground,
   ProgressBar,
 } from '../components/glass';
 import { Book3D } from '../components/Book3D';
@@ -47,7 +39,6 @@ export function NotebookDetailScreen({
   navigation,
 }: RootScreenProps<'NotebookDetail'>) {
   const { notebookId } = route.params;
-  const insets = useSafeAreaInsets();
   const [nb, setNb] = useState<NotebookDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -99,99 +90,96 @@ export function NotebookDetailScreen({
     ? nb.slots.find((s) => s.slotDate === todayLocal()) ?? null
     : null;
 
+  const cta =
+    loaded && nb && !done ? (
+      todaySlot?.status === 'filled' ? (
+        // 오늘 일기를 이미 완성 → 새로 쓰기 대신 보기
+        <GradientButton
+          label="오늘 일기 보기"
+          trailing="→"
+          onPress={() =>
+            todaySlot.conversationId && openDiary(todaySlot.conversationId)
+          }
+        />
+      ) : todaySlot?.status === 'drafting' ? (
+        // 오늘 대화를 시작했지만 일기 미완성 → 이어가기
+        <GradientButton
+          label="오늘 이야기 이어가기"
+          trailing="→"
+          loading={busy}
+          onPress={() =>
+            todaySlot.conversationId
+              ? openChat(todaySlot.conversationId)
+              : openToday()
+          }
+        />
+      ) : (
+        <GradientButton
+          label={isPeriod ? '오늘 이야기하기' : '다음 장면 쓰기'}
+          trailing="→"
+          loading={busy}
+          onPress={openToday}
+        />
+      )
+    ) : undefined;
+
   return (
-    <NightBackground>
-      {/* 고정 헤더 — 스크롤에 딸려가지 않는다 */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Pressable
-          style={styles.gear}
-          hitSlop={8}
-          onPress={() => navigation.navigate('NotebookSettings', { notebookId })}
-        >
-          <Text style={styles.gearTxt}>⚙</Text>
-        </Pressable>
-      </View>
-
-      {/* 본문만 스크롤 */}
-      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
-        {error ? (
-          <ErrorState message={error} onRetry={load} inline />
-        ) : !loaded || !nb ? (
-          <Text style={styles.loading}>불러오는 중…</Text>
-        ) : (
-          <>
-            <View style={styles.hero}>
-              <Book3D format={nb.format} title={nb.title} width={94} />
-              <View style={styles.heroInfo}>
-                <Text style={styles.heroTitle} numberOfLines={2}>
-                  {nb.title}
-                </Text>
-                <Text style={styles.heroMeta}>
-                  {isPeriod ? '기간형' : '칸형'} · {getFormatDef(nb.format).label}
-                </Text>
-                <View style={styles.heroProg}>
-                  <ProgressBar
-                    ratio={nb.slotCount ? nb.filledCount / nb.slotCount : 0}
-                  />
-                </View>
-                <Text style={styles.heroPct}>
-                  {isPeriod
-                    ? `${nb.filledCount}편을 남겼어`
-                    : `${nb.filledCount} / ${nb.slotCount}칸`}
-                </Text>
+    <GlassScaffold
+      header={
+        <View style={styles.headerRow}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Pressable
+            style={styles.gear}
+            hitSlop={8}
+            onPress={() => navigation.navigate('NotebookSettings', { notebookId })}
+          >
+            <Text style={styles.gearTxt}>⚙</Text>
+          </Pressable>
+        </View>
+      }
+      footer={cta}
+    >
+      {error ? (
+        <ErrorState message={error} onRetry={load} inline />
+      ) : !loaded || !nb ? (
+        <Text style={styles.loading}>불러오는 중…</Text>
+      ) : (
+        <>
+          <View style={styles.hero}>
+            <Book3D format={nb.format} title={nb.title} width={94} />
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroTitle} numberOfLines={2}>
+                {nb.title}
+              </Text>
+              <Text style={styles.heroMeta}>
+                {isPeriod ? '기간형' : '칸형'} · {getFormatDef(nb.format).label}
+              </Text>
+              <View style={styles.heroProg}>
+                <ProgressBar
+                  ratio={nb.slotCount ? nb.filledCount / nb.slotCount : 0}
+                />
               </View>
+              <Text style={styles.heroPct}>
+                {isPeriod
+                  ? `${nb.filledCount}편을 남겼어`
+                  : `${nb.filledCount} / ${nb.slotCount}칸`}
+              </Text>
             </View>
+          </View>
 
-            {isPeriod ? (
-              <PeriodCalendar nb={nb} onPick={openDiary} />
-            ) : (
-              <CellSlots
-                nb={nb}
-                onPick={openDiary}
-                onResume={openChat}
-                onWrite={openToday}
-              />
-            )}
-          </>
-        )}
-      </ScrollView>
-
-      {/* 고정 하단 CTA — 스크롤과 무관하게 항상 보임 */}
-      {loaded && nb && !done && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom || spacing.md }]}>
-          {todaySlot?.status === 'filled' ? (
-            // 오늘 일기를 이미 완성 → 새로 쓰기 대신 보기
-            <GradientButton
-              label="오늘 일기 보기"
-              trailing="→"
-              onPress={() =>
-                todaySlot.conversationId && openDiary(todaySlot.conversationId)
-              }
-            />
-          ) : todaySlot?.status === 'drafting' ? (
-            // 오늘 대화를 시작했지만 일기 미완성 → 이어가기
-            <GradientButton
-              label="오늘 이야기 이어가기"
-              trailing="→"
-              loading={busy}
-              onPress={() =>
-                todaySlot.conversationId
-                  ? openChat(todaySlot.conversationId)
-                  : openToday()
-              }
-            />
+          {isPeriod ? (
+            <PeriodCalendar nb={nb} onPick={openDiary} />
           ) : (
-            <GradientButton
-              label={isPeriod ? '오늘 이야기하기' : '다음 장면 쓰기'}
-              trailing="→"
-              loading={busy}
-              onPress={openToday}
+            <CellSlots
+              nb={nb}
+              onPick={openDiary}
+              onResume={openChat}
+              onWrite={openToday}
             />
           )}
-        </View>
+        </>
       )}
-    </NightBackground>
+    </GlassScaffold>
   );
 }
 
@@ -356,24 +344,10 @@ function CellSlots({
 const NOVEL = formatColors.novel;
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
-  },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   gear: {
     width: 40,

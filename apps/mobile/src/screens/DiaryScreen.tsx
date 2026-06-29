@@ -3,18 +3,13 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import Markdown from 'react-native-markdown-display';
 import {
   getFormatDef,
@@ -31,6 +26,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import {
   BackButton,
   GlassCard,
+  GlassScaffold,
   GradientButton,
   NightBackground,
 } from '../components/glass';
@@ -102,7 +98,6 @@ function markdownStyle(format: DiaryFormat, imgWidth: number) {
 export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
   const { conversationId: id } = route.params;
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [costs, setCosts] = useState<CostSummary | null>(null);
@@ -114,9 +109,6 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
   const [savedFeedback, setSavedFeedback] = useState('');
   const [savingFeedback, setSavingFeedback] = useState(false);
   const [showDev, setShowDev] = useState(false);
-  // 상/하단 글라스 바 높이 — 스크롤 콘텐츠가 바 뒤로 가려지지 않게 padding으로 확보한다.
-  const [headerH, setHeaderH] = useState(0);
-  const [footerH, setFooterH] = useState(0);
 
   const load = () => {
     setLoadError(null);
@@ -195,16 +187,26 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
   const imgWidth = width - 2 * spacing.lg - 2 * 22;
 
   return (
-    <NightBackground>
-      {/* 본문 — 화면을 꽉 채우고, 상/하단 글라스 바 뒤로 스크롤된다 */}
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: headerH + spacing.sm, paddingBottom: footerH + spacing.md },
-        ]}
-        scrollIndicatorInsets={{ top: headerH, bottom: footerH }}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <GlassScaffold
+        header={
+          <View style={styles.headerRow}>
+            <BackButton onPress={() => navigation.goBack()} />
+            <Text style={styles.fmtLabel}>{def.label}</Text>
+          </View>
+        }
+        footer={
+          <View style={styles.actions}>
+            <GradientButton
+              label="＋ 더 얘기해 보강"
+              style={{ flex: 1 }}
+              onPress={() => navigation.navigate('Chat', { conversationId: id })}
+            />
+            <Pressable style={styles.editBtn} onPress={() => setReviseOpen(true)}>
+              <Text style={styles.editTxt}>✎ 고치기</Text>
+            </Pressable>
+          </View>
+        }
       >
           {/* paper-sheet */}
           <GlassCard strong radius={20} contentStyle={styles.paperPad}>
@@ -324,56 +326,7 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
               )}
             </View>
           )}
-      </ScrollView>
-
-      {/* 고정 글라스 헤더 — 콘텐츠가 뒤로 비쳐 보인다(스크롤에 안 딸려감) */}
-      <View
-        style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}
-        onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
-      >
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          blurType="dark"
-          blurAmount={5}
-          reducedTransparencyFallbackColor="#14101e"
-        />
-        <View style={[StyleSheet.absoluteFill, styles.glassTint]} pointerEvents="none" />
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.fmtLabel}>{def.label}</Text>
-      </View>
-
-      {/* 고정 글라스 하단 — 액션 + 고치기 입력. 키보드 올라오면 함께 상승 */}
-      <KeyboardAvoidingView
-        style={styles.footerKav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View
-          style={[styles.footerBar, { paddingBottom: insets.bottom || spacing.md }]}
-          onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
-        >
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            blurType="dark"
-            blurAmount={5}
-            reducedTransparencyFallbackColor="#14101e"
-          />
-          <View style={[StyleSheet.absoluteFill, styles.glassTint]} pointerEvents="none" />
-
-          <View style={styles.actions}>
-            <GradientButton
-              label="＋ 더 얘기해 보강"
-              style={{ flex: 1 }}
-              onPress={() => navigation.navigate('Chat', { conversationId: id })}
-            />
-            <Pressable
-              style={styles.editBtn}
-              onPress={() => setReviseOpen(true)}
-            >
-              <Text style={styles.editTxt}>✎ 고치기</Text>
-            </Pressable>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+      </GlassScaffold>
 
       {/* 고치기 — 바텀시트(슬라이드 + 쓸어내려 닫기) */}
       <BottomSheet
@@ -402,33 +355,18 @@ export function DiaryScreen({ route, navigation }: RootScreenProps<'Diary'>) {
           />
         </View>
       </BottomSheet>
-    </NightBackground>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { paddingHorizontal: spacing.lg },
-
-  // 고정 글라스 헤더(절대배치 — 콘텐츠가 뒤로 비친다)
-  headerBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    overflow: 'hidden',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    justifyContent: 'space-between',
   },
-  // 상/하단 글라스 바 공통 틴트 — 옅게 둬 뒤 콘텐츠가 비쳐 보이게 한다.
-  glassTint: { backgroundColor: 'rgba(20,16,30,0.28)' },
   fmtLabel: {
-    marginLeft: 'auto',
     fontSize: 12,
     fontWeight: '700',
     color: colors.lav2,
@@ -459,16 +397,6 @@ const styles = StyleSheet.create({
   mastheadDate: { fontSize: 10, color: colors.muted },
   empty: { color: colors.muted, fontSize: 15 },
 
-  // 고정 글라스 하단(절대배치) — 액션 + 고치기 입력
-  footerKav: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  footerBar: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    gap: spacing.md,
-    overflow: 'hidden',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
   actions: { flexDirection: 'row', gap: spacing.sm },
   editBtn: {
     paddingHorizontal: 18,

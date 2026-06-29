@@ -1,15 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NotebookDetailDto } from '@ai-diary/shared';
 import { api } from '../lib/api';
 import { toUserMessage } from '../lib/errors';
@@ -20,7 +10,13 @@ import {
   reconcileReminders,
 } from '../lib/notifications';
 import { ErrorState } from '../components/ui';
-import { BackButton, GlassCard, GradientButton, NightBackground } from '../components/glass';
+import {
+  BackButton,
+  GlassCard,
+  GlassScaffold,
+  GradientButton,
+  NightBackground,
+} from '../components/glass';
 import { TimePickerSheet } from '../components/TimePickerSheet';
 import { colors, radius, spacing, type } from '../theme';
 import type { RootScreenProps } from '../navigation/types';
@@ -37,7 +33,6 @@ export function NotebookSettingsScreen({
   navigation,
 }: RootScreenProps<'NotebookSettings'>) {
   const { notebookId, fromPurchase } = route.params;
-  const insets = useSafeAreaInsets();
 
   const [nb, setNb] = useState<NotebookDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,14 +108,19 @@ export function NotebookSettingsScreen({
   }
 
   return (
-    <NightBackground>
-      {/* 고정 헤더 */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <BackButton onPress={() => navigation.goBack()} />
-      </View>
-
-      {/* 본문 스크롤 */}
-      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
+    <>
+      <GlassScaffold
+        header={<BackButton onPress={() => navigation.goBack()} />}
+        footer={
+          fromPurchase ? (
+            <GradientButton
+              label="완료"
+              trailing="→"
+              onPress={() => navigation.navigate('Main', { screen: 'Shelf' })}
+            />
+          ) : undefined
+        }
+      >
         <Text style={styles.title}>알림 설정</Text>
         <Text style={styles.sub} numberOfLines={2}>
           {fromPurchase
@@ -162,18 +162,7 @@ export function NotebookSettingsScreen({
             </Text>
           </Pressable>
         )}
-      </ScrollView>
-
-      {/* 고정 하단 CTA (구매 직후 완료 버튼) */}
-      {fromPurchase && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom || spacing.md }]}>
-          <GradientButton
-            label="완료"
-            trailing="→"
-            onPress={() => navigation.navigate('Main', { screen: 'Shelf' })}
-          />
-        </View>
-      )}
+      </GlassScaffold>
 
       <TimePickerSheet
         visible={pickerOpen}
@@ -181,29 +170,11 @@ export function NotebookSettingsScreen({
         onClose={() => setPickerOpen(false)}
         onConfirm={onConfirmTime}
       />
-    </NightBackground>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
   title: { ...type.h1, color: colors.heading, marginBottom: 8 },
   sub: { ...type.body, color: colors.textSoft, marginBottom: spacing.xl },
   card: { paddingVertical: 4 },

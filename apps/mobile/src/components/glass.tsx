@@ -1,6 +1,9 @@
-import React, { useId, useState, type ReactNode } from 'react';
+import React, { useId, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -9,6 +12,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, {
   Defs,
   LinearGradient as SvgLinearGradient,
@@ -51,6 +55,110 @@ export function NightBackground({ children }: { children: ReactNode }) {
       </Svg>
       {children}
     </View>
+  );
+}
+
+/**
+ * 공통 화면 골격 — 상단 글라스 헤더 + 본문 스크롤 + (선택)하단 글라스 CTA.
+ * - 헤더/CTA는 절대배치 글라스 바(스크롤에 딸려가지 않음), 본문만 스크롤.
+ * - 글라스(blur+tint)는 **처음엔 투명**이고 **스크롤되면 페이드인**된다(iOS 네비바 패턴).
+ * - 바 높이를 onLayout으로 측정해 본문 padding으로 확보(가려짐 방지).
+ * - 하단 CTA는 키보드가 뜨면 함께 올라온다.
+ */
+export function GlassScaffold({
+  header,
+  footer,
+  children,
+  contentStyle,
+}: {
+  /** 헤더 바 안에 들어갈 내용(예: 뒤로가기/기어 행). */
+  header: ReactNode;
+  /** 하단 CTA 바 내용(없으면 바 미표시). */
+  footer?: ReactNode;
+  children: ReactNode;
+  contentStyle?: StyleProp<ViewStyle>;
+}) {
+  const insets = useSafeAreaInsets();
+  const [headerH, setHeaderH] = useState(0);
+  const [footerH, setFooterH] = useState(0);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  // 스크롤 0→24 구간에서 글라스 0→1로 페이드(처음 투명 → 스크롤 시 frosted).
+  const glass = scrollY.interpolate({
+    inputRange: [0, 24],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <NightBackground>
+      <Animated.ScrollView
+        style={styles.scaffFlex}
+        contentContainerStyle={[
+          styles.scaffContent,
+          {
+            paddingTop: headerH + spacing.sm,
+            paddingBottom: (footer != null ? footerH : insets.bottom) + spacing.lg,
+          },
+          contentStyle,
+        ]}
+        scrollIndicatorInsets={{ top: headerH, bottom: footer != null ? footerH : 0 }}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
+      >
+        {children}
+      </Animated.ScrollView>
+
+      {/* 고정 글라스 헤더 */}
+      <View
+        style={[styles.scaffHeader, { paddingTop: insets.top + spacing.sm }]}
+        onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
+      >
+        <Animated.View
+          style={[StyleSheet.absoluteFill, styles.scaffHeaderGlass, { opacity: glass }]}
+          pointerEvents="none"
+        >
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            blurType="dark"
+            blurAmount={5}
+            reducedTransparencyFallbackColor="#0c0a14"
+          />
+          <View style={[StyleSheet.absoluteFill, styles.scaffTint]} />
+        </Animated.View>
+        {header}
+      </View>
+
+      {/* 고정 글라스 하단 CTA */}
+      {footer != null && (
+        <KeyboardAvoidingView
+          style={styles.scaffFooterKav}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View
+            style={[styles.scaffFooter, { paddingBottom: insets.bottom || spacing.md }]}
+            onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
+          >
+            <Animated.View
+              style={[StyleSheet.absoluteFill, styles.scaffFooterGlass, { opacity: glass }]}
+              pointerEvents="none"
+            >
+              <BlurView
+                style={StyleSheet.absoluteFill}
+                blurType="dark"
+                blurAmount={5}
+                reducedTransparencyFallbackColor="#0c0a14"
+              />
+              <View style={[StyleSheet.absoluteFill, styles.scaffTint]} />
+            </Animated.View>
+            {footer}
+          </View>
+        </KeyboardAvoidingView>
+      )}
+    </NightBackground>
   );
 }
 
@@ -385,6 +493,33 @@ const styles = StyleSheet.create({
   ctaTrailing: { color: colors.onLav, fontSize: 17, fontWeight: '800' },
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20 },
   topScrimTint: { backgroundColor: 'rgba(10,8,16,0.45)' },
+  // GlassScaffold
+  scaffFlex: { flex: 1 },
+  scaffContent: { paddingHorizontal: spacing.lg },
+  scaffHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  scaffHeaderGlass: {
+    overflow: 'hidden',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  scaffFooterKav: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  scaffFooter: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  scaffFooterGlass: {
+    overflow: 'hidden',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  scaffTint: { backgroundColor: 'rgba(20,16,30,0.28)' },
   progTrack: {
     height: 6,
     borderRadius: 99,
