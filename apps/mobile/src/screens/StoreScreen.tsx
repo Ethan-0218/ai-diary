@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFormatDef, type ProductDto } from '@ai-diary/shared';
 import { api } from '../lib/api';
 import {
@@ -16,6 +17,7 @@ import { colors, spacing } from '../theme';
 import type { TabScreenProps } from '../navigation/types';
 
 export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
+  const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [prices, setPrices] = useState<Record<string, IapProduct>>({});
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,10 @@ export function StoreScreen({ navigation }: TabScreenProps<'Store'>) {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + spacing.md },
+      ]}
     >
       <Text style={styles.lead}>마음에 드는 일기장을 골라 채워보세요.</Text>
       {!loaded ? (
